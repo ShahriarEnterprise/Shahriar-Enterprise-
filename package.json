@@ -26,3 +26,4 @@
   "devDependencies": {
     "@next/swc-wasm-nodejs": "^16.2.11"
   }
+}
