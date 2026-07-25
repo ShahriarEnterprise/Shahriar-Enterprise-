@@ -5,22 +5,21 @@ import { useStore } from '@/lib/store'
 import { useRouter } from 'next/navigation'
 
 interface TransactionFormProps {
-  partyId?: string // নির্দিষ্ট পার্টি থেকে আসলে
-  onClose?: modalCloseProp
+  partyId?: string
+  onClose?: () => void
+  defaultType?: 'বিক্রি' | 'ক্রয়'
 }
 
-export default function TransactionForm({ partyId: initialPartyId, onClose }: any) {
+export default function TransactionForm({ partyId: initialPartyId, onClose, defaultType = 'বিক্রি' }: TransactionFormProps) {
   const { parties, products, addTransaction } = useStore()
   const router = useRouter()
 
-  // কাস্টমার সিলেক্ট বা ডিফল্ট সেট করা
   const [selectedPartyId, setSelectedPartyId] = useState(initialPartyId || parties[0]?.id || '')
   const [searchTerm, setSearchTerm] = useState('')
   const [quantities, setQuantities] = useState<{ [productId: string]: number }>({})
   const [paid, setPaid] = useState<number>(0)
   const [note, setNote] = useState('')
 
-  // অটোমেটিক মেমো নম্বর ও বর্তমান তারিখ-সময় জেনারেট
   const memoNo = useMemo(() => {
     const randomNum = Math.floor(10000 + Math.random() * 90000)
     return `#SE-${new Date().getFullYear()}-${randomNum}`
@@ -37,15 +36,12 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
     minute: '2-digit',
   })
 
-  // সিলেক্টেড কাস্টমার বা পার্টি ইনফো
   const selectedParty = parties.find((p) => p.id === selectedPartyId)
 
-  // প্রোডাক্ট সার্চ ফিল্টার
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // পরিমাণ পরিবর্তন হ্যান্ডলার
   const handleQtyChange = (productId: string, qty: number) => {
     setQuantities((prev) => ({
       ...prev,
@@ -53,7 +49,6 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
     }))
   }
 
-  // কার্টে থাকা বা সিলেক্ট করা আইটেমগুলোর হিসাব
   const selectedItems = useMemo(() => {
     return Object.entries(quantities)
       .filter(([_, qty]) => qty > 0)
@@ -63,7 +58,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
           productId,
           name: prod?.name || '',
           unit: prod?.unit || 'পিস',
-          price: Number(prod?.price || prod?.sellPrice || 0),
+          price: Number(prod?.price || prod?.sellPrice || prod?.buyingPrice || 0),
           qty,
         }
       })
@@ -72,7 +67,6 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
   const grandTotal = selectedItems.reduce((sum, item) => sum + item.price * item.qty, 0)
   const dueAmount = Math.max(0, grandTotal - Number(paid || 0))
 
-  // সাবমিট বা মেমো তৈরি হ্যান্ডলার
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (selectedItems.length === 0) {
@@ -81,7 +75,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
     }
 
     addTransaction({
-      type: 'বিক্রি',
+      type: defaultType,
       partyId: selectedPartyId,
       partyName: selectedParty?.name,
       items: selectedItems,
@@ -91,7 +85,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
 
     alert('সফলভাবে মেমো তৈরি এবং অর্ডার সম্পন্ন হয়েছে!')
     if (onClose) onClose()
-    router.push(`/parties/${selectedPartyId}`)
+    router.push(selectedPartyId ? `/parties/${selectedPartyId}` : '/')
   }
 
   return (
@@ -123,7 +117,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
               <select
                 value={selectedPartyId}
                 onChange={(e) => setSelectedPartyId(e.target.value)}
-                className="w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-gray-800"
               >
                 {parties.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -150,10 +144,10 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">🔍</span>
             <input
               type="text"
-              placeholder="পণ্য সার্চ করুন (যেমন: তেল, চিনি, চাল)..."
+              placeholder="পণ্য সার্চ করুন (যেমন: চিনি, চাল)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-gray-800"
             />
           </div>
 
@@ -165,7 +159,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
               filteredProducts.map((prod) => {
                 const currentQty = quantities[prod.id] || 0
                 const isSelected = currentQty > 0
-                const price = Number(prod.price || prod.sellPrice || 0)
+                const price = Number(prod.price || prod.sellPrice || prod.buyingPrice || 0)
 
                 return (
                   <div
@@ -196,7 +190,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
                         min="0"
                         value={currentQty}
                         onChange={(e) => handleQtyChange(prod.id, Number(e.target.value))}
-                        className="w-16 p-1.5 text-center text-sm font-bold bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-16 p-1.5 text-center text-sm font-bold bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-gray-800"
                       />
                       <span className="text-xs text-gray-500 w-8">{prod.unit}</span>
                     </div>
@@ -228,7 +222,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
                 value={paid || ''}
                 onChange={(e) => setPaid(Number(e.target.value))}
                 placeholder="০"
-                className="w-32 p-2 text-right text-sm font-bold bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-32 p-2 text-right text-sm font-bold bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-gray-800"
               />
             </div>
             <div className="flex justify-between text-sm font-bold text-red-600 border-t border-gray-200 pt-2">
@@ -245,7 +239,7 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
             placeholder="বিশেষ নোট বা মন্তব্য (ঐচ্ছিক)..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full p-2.5 text-sm bg-gray-50 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full p-2.5 text-sm bg-gray-50 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-gray-800"
           />
         </div>
 
@@ -260,3 +254,6 @@ export default function TransactionForm({ partyId: initialPartyId, onClose }: an
     </div>
   )
 }
+
+// উভয় ফরম্যাটের ইম্পোর্ট নিশ্চিত করার জন্য (Fixes Build Import Error)
+export { TransactionForm }
