@@ -1,9 +1,9 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { Phone, MessageSquare, HandCoins, ArrowDownLeft, ArrowUpRight, ShoppingCart, Gift, Plus, Minus, Search, Trash2, Printer, AlertCircle } from 'lucide-react'
+import { Phone, MessageSquare, Coins, ArrowDownLeft, ArrowUpRight, ShoppingCart, Gift, Plus, Minus, Search, Trash2, Printer, AlertCircle } from 'lucide-react'
 import { Screen } from '@/components/screen'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -15,13 +15,15 @@ import { bdt, bnDate, toBn } from '@/lib/format'
 export default function PartyDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }> | { id: string }
+  params: { id: string } | Promise<{ id: string }>
 }) {
-  const resolvedParams = params && typeof (params as any).then === 'function' 
-    ? use(params as Promise<{ id: string }>) 
-    : (params as { id: string })
-  
-  const id = resolvedParams?.id
+  const [resolvedId, setResolvedId] = useState<string>('')
+
+  useEffect(() => {
+    Promise.resolve(params).then((p) => {
+      setResolvedId(p?.id)
+    })
+  }, [params])
 
   const router = useRouter()
   const store = useStore()
@@ -57,7 +59,7 @@ export default function PartyDetailPage({
   const [recentOrder, setRecentOrder] = useState<any>(null)
   const [memoModalOpen, setMemoModalOpen] = useState(false)
 
-  if (!mounted) {
+  if (!mounted || !resolvedId) {
     return (
       <Screen title="লোড হচ্ছে..." back showNav={false}>
         <div className="p-8 text-center text-sm text-muted-foreground">তথ্য লোড হচ্ছে...</div>
@@ -65,7 +67,7 @@ export default function PartyDetailPage({
     )
   }
 
-  const party = parties.find((p) => p?.id === id)
+  const party = parties.find((p) => p?.id === resolvedId)
   if (!party) {
     return (
       <Screen title="পাওয়া যায়নি" back showNav={false}>
@@ -74,7 +76,7 @@ export default function PartyDetailPage({
     )
   }
 
-  const ledger = transactions.filter((t) => t?.partyId === id)
+  const ledger = transactions.filter((t) => t?.partyId === resolvedId)
   const balance = Number(party.balance ?? 0)
   const owes = balance > 0
   const settled = balance === 0
@@ -167,7 +169,6 @@ export default function PartyDetailPage({
       transactions.unshift(newTxn)
     }
 
-    // Deduct stock for all cart items
     cartItems.forEach(item => {
       if (updateStock) {
         updateStock(item.id, item.qty)
@@ -177,7 +178,6 @@ export default function PartyDetailPage({
       }
     })
 
-    // Update party balance (add calculatedDue to balance)
     if (party.balance !== undefined) {
       party.balance = Number(party.balance) + calculatedDue
     }
@@ -191,7 +191,6 @@ export default function PartyDetailPage({
       newBalance: Number(balance) + calculatedDue
     })
 
-    // Reset Form
     setCartItems([])
     setCashPaid('')
     setOrderOpen(false)
@@ -281,7 +280,7 @@ export default function PartyDetailPage({
               className="flex-col gap-1 h-auto py-2.5 px-1"
               onClick={() => setCollectOpen(true)}
             >
-              <HandCoins className="h-4 w-4" />
+              <Coins className="h-4 w-4" />
               <span className="text-[11px]">আদায়</span>
             </Button>
             <Button
