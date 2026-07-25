@@ -29,30 +29,39 @@ export default function PartyDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const { parties, transactions, collectDue } = useStore()
+  const store = useStore()
+  
+  // Safe array fallback to prevent undefined errors
+  const parties = Array.isArray(store?.parties) ? store.parties : []
+  const transactions = Array.isArray(store?.transactions) ? store.transactions : []
+  const collectDue = store?.collectDue
+
   const [collectOpen, setCollectOpen] = useState(false)
   const [amount, setAmount] = useState('')
 
-  const party = parties.find((p) => p.id === id)
+  const party = parties.find((p) => p?.id === id)
   if (!party) notFound()
 
-  const ledger = transactions.filter((t) => t.partyId === id)
-  const owes = party.balance > 0
-  const settled = party.balance === 0
+  const ledger = transactions.filter((t) => t?.partyId === id)
+  const balance = party.balance ?? 0
+  const owes = balance > 0
+  const settled = balance === 0
 
   function handleCollect() {
     const val = Number(amount)
-    if (val > 0) collectDue(party!.id, val)
+    if (val > 0 && collectDue) {
+      collectDue(party!.id, val)
+    }
     setAmount('')
     setCollectOpen(false)
   }
 
-  const reminderText = `প্রিয় ${party.name}, আমাদের কাছে আপনার ${bdt(
-    Math.abs(party.balance),
+  const reminderText = `প্রিয় ${party.name ?? ''}, আমাদের কাছে আপনার ${bdt(
+    Math.abs(balance),
   )} টাকা বাকি রয়েছে। অনুগ্রহ করে পরিশোধ করুন। — Shahriar Enterprise`
 
   return (
-    <Screen title={party.name} subtitle={party.type} back showNav={false}>
+    <Screen title={party.name ?? 'পার্টি'} subtitle={party.type ?? ''} back showNav={false}>
       <div className="space-y-4">
         {/* Balance hero */}
         <div className="rounded-2xl bg-card p-5 text-center shadow-sm">
@@ -64,7 +73,7 @@ export default function PartyDetailPage({
               settled ? 'text-foreground' : owes ? 'text-primary' : 'text-destructive'
             }`}
           >
-            {bdt(Math.abs(party.balance))}
+            {bdt(Math.abs(balance))}
           </p>
           {party.address && (
             <p className="mt-1 text-xs text-muted-foreground">{party.address}</p>
@@ -76,7 +85,7 @@ export default function PartyDetailPage({
               className="flex-col gap-1 h-auto py-2.5"
               asChild
             >
-              <a href={`tel:${party.phone}`}>
+              <a href={`tel:${party.phone ?? ''}`}>
                 <Phone className="h-4 w-4" />
                 <span className="text-xs">কল</span>
               </a>
@@ -87,7 +96,7 @@ export default function PartyDetailPage({
               asChild
             >
               <a
-                href={`sms:${party.phone}?body=${encodeURIComponent(reminderText)}`}
+                href={`sms:${party.phone ?? ''}?body=${encodeURIComponent(reminderText)}`}
               >
                 <MessageSquare className="h-4 w-4" />
                 <span className="text-xs">তাগাদা</span>
@@ -110,10 +119,11 @@ export default function PartyDetailPage({
           </h2>
           <ul className="space-y-2.5">
             {ledger.map((t) => {
+              if (!t) return null
               const sale = t.type === 'বিক্রি'
               const txnItems = Array.isArray(t.items) ? t.items : []
               return (
-                <li key={t.id} className="rounded-2xl bg-card p-3.5 shadow-sm">
+                <li key={t.id ?? Math.random()} className="rounded-2xl bg-card p-3.5 shadow-sm">
                   <div className="flex items-center gap-3">
                     <span
                       className={`flex h-9 w-9 items-center justify-center rounded-full ${
@@ -128,22 +138,22 @@ export default function PartyDetailPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-card-foreground">
-                        {t.type} · {toBn(txnItems.length)} আইটেম
+                        {t.type ?? 'লেনদেন'} · {toBn(txnItems.length)} আইটেম
                       </p>
                       <p className="text-xs text-muted-foreground">{bnDate(t.date)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-card-foreground">
-                        {bdt(t.total)}
+                        {bdt(t.total ?? 0)}
                       </p>
-                      {t.due > 0 && (
+                      {(t.due ?? 0) > 0 && (
                         <p className="text-[11px] text-destructive">বাকি {bdt(t.due)}</p>
                       )}
                     </div>
                   </div>
                   {txnItems.length > 0 && (
                     <p className="mt-2 truncate border-t border-border pt-2 text-xs text-muted-foreground">
-                      {txnItems.map((i) => `${i.name} (${toBn(i.qty)})`).join(', ')}
+                      {txnItems.map((i) => `${i?.name ?? ''} (${toBn(i?.qty ?? 0)})`).join(', ')}
                     </p>
                   )}
                 </li>
