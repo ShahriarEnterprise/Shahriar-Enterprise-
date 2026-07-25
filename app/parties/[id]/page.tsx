@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { Phone, MessageSquare, HandCoins, ArrowDownLeft, ArrowUpRight, ShoppingCart, Gift, Plus, Minus, Search, AlertCircle } from 'lucide-react'
+import { Phone, MessageSquare, HandCoins, ArrowDownLeft, ArrowUpRight, ShoppingCart, Gift, Plus, Minus, Search, Trash2, Printer, AlertCircle } from 'lucide-react'
 import { Screen } from '@/components/screen'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -38,7 +38,7 @@ export default function PartyDetailPage({
     { id: 'p2', name: 'নাজিরশাইল চাল (৫০ কেজি)', stock: 8, price: 3400 },
     { id: 'p3', name: 'চিনির প্যাকেট (১ কেজি)', stock: 0, price: 135 },
     { id: 'p4', name: 'সয়াবিন তেল (৫ লিটার)', stock: 25, price: 850 },
-  ] // Fallback mock products if store.products isn't defined yet
+  ]
 
   const collectDue = store?.collectDue
   const addTransaction = store?.addTransaction
@@ -47,12 +47,15 @@ export default function PartyDetailPage({
   const [collectOpen, setCollectOpen] = useState(false)
   const [amount, setAmount] = useState('')
 
-  // New Order / Inventory Modal State
+  // Multi-item Cart Order Modal State
   const [orderOpen, setOrderOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedProduct, setSelectedProduct] = useState<any>(null)
-  const [qty, setQty] = useState(1)
-  const [itemDue, setItemDue] = useState('')
+  const [cartItems, setCartItems] = useState<Array<{ id: string, name: string, price: number, qty: number, stock: number }>>([])
+  const [cashPaid, setCashPaid] = useState('')
+  
+  // Memo View State after order
+  const [recentOrder, setRecentOrder] = useState<any>(null)
+  const [memoModalOpen, setMemoModalOpen] = useState(false)
 
   if (!mounted) {
     return (
@@ -72,13 +75,13 @@ export default function PartyDetailPage({
   }
 
   const ledger = transactions.filter((t) => t?.partyId === id)
-  const balance = party.balance ?? 0
+  const balance = Number(party.balance ?? 0)
   const owes = balance > 0
   const settled = balance === 0
 
   const totalSaleAmount = ledger
     .filter((t) => t?.type === 'বিক্রি')
-    .reduce((acc, t) => acc + (t?.total ?? 0), 0)
+    .reduce((acc, t) => acc + Number(t?.total ?? 0), 0)
 
   // Reward & Milestone Logic
   let rewardTitle = "শুরু হয়েছে"
@@ -90,16 +93,16 @@ export default function PartyDetailPage({
     rewardDesc = "অভিনন্দন! আপনি ১ লাখ টাকার মেগা পুরস্কার অর্জন করেছেন।"
   } else if (totalSaleAmount >= 50000) {
     rewardTitle = "🥈 ব্লেন্ডার উপহার অর্জিত!"
-    rewardDesc = `পরবর্তী লক্ষ্য: ১,০০,০০০ টাকা (মেগা উপহারের জন্য বাকি ${bdt(100000 - totalSaleAmount)})`
+    rewardDesc = `পরবর্তী লক্ষ্য: ১,০০,০০০ টাকা (মেগা উপহারের জন্য বাকি ${bdt(Math.max(0, 100000 - totalSaleAmount))})`
   } else if (totalSaleAmount >= 10000) {
     rewardTitle = "🎁 রাইস কুকার উপহার অর্জিত!"
-    rewardDesc = `পরবর্তী লক্ষ্য: ৫০,০০০ টাকা (ব্লেন্ডারের জন্য বাকি ${bdt(50000 - totalSaleAmount)})`
+    rewardDesc = `পরবর্তী লক্ষ্য: ৫০,০০০ টাকা (ব্লেন্ডারের জন্য বাকি ${bdt(Math.max(0, 50000 - totalSaleAmount))})`
   } else {
-    rewardDesc = `রাইস কুকার পেতে আরও বাকি ${bdt(10000 - totalSaleAmount)}`
+    rewardDesc = `রাইস কুকার পেতে আরও বাকি ${bdt(Math.max(0, 10000 - totalSaleAmount))}`
   }
 
   function handleCollect() {
-    const val = Number(amount)
+    const val = Number(amount) || 0
     if (val > 0 && collectDue && party?.id) {
       collectDue(party.id, val)
     }
@@ -111,24 +114,51 @@ export default function PartyDetailPage({
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const isStockOut = !selectedProduct || selectedProduct.stock <= 0 || qty > selectedProduct.stock
-  const calculatedTotal = selectedProduct ? selectedProduct.price * qty : 0
+  const handleAddToCart = (product: any) => {
+    const existingIndex = cartItems.findIndex(item => item.id === product.id)
+    if (existingIndex > -1) {
+      const updated = [...cartItems]
+      updated[existingIndex].qty += 1
+      setCartItems(updated)
+    } else {
+      setCartItems([...cartItems, { id: product.id, name: product.name, price: Number(product.price) || 0, qty: 1, stock: Number(product.stock) || 0 }])
+    }
+    setSearchTerm('')
+  }
+
+  const updateCartQty = (id: string, delta: number) => {
+    setCartItems(cartItems.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(1, item.qty + delta)
+        return { ...item, qty: newQty }
+      }
+      return item
+    }))
+  }
+
+  const removeFromCart = (id: string) => {
+    setCartItems(cartItems.filter(item => item.id !== id))
+  }
+
+  const grandTotal = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0)
+  const cashNum = Number(cashPaid) || 0
+  const calculatedDue = Math.max(0, grandTotal - cashNum)
+
+  const hasStockError = cartItems.some(item => item.qty > item.stock)
 
   function handleCreateOrder(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedProduct) return
-    if (qty <= 0) return
-
-    const dueVal = Number(itemDue) || 0
+    if (cartItems.length === 0 || hasStockError) return
 
     const newTxn = {
       id: 'txn_' + Date.now(),
       partyId: party.id,
       type: 'বিক্রি',
       date: new Date().toISOString().split('T')[0],
-      total: calculatedTotal,
-      due: dueVal,
-      items: [{ name: selectedProduct.name, qty: qty, price: selectedProduct.price }]
+      total: grandTotal,
+      cashPaid: cashNum,
+      due: calculatedDue,
+      items: cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price }))
     }
 
     if (addTransaction) {
@@ -137,23 +167,41 @@ export default function PartyDetailPage({
       transactions.unshift(newTxn)
     }
 
-    // Deduct stock automatically
-    if (updateStock) {
-      updateStock(selectedProduct.id, qty)
-    } else if (selectedProduct.stock !== undefined) {
-      selectedProduct.stock -= qty
+    // Deduct stock for all cart items
+    cartItems.forEach(item => {
+      if (updateStock) {
+        updateStock(item.id, item.qty)
+      } else {
+        const p = products.find(prod => prod.id === item.id)
+        if (p) p.stock = Math.max(0, p.stock - item.qty)
+      }
+    })
+
+    // Update party balance (add calculatedDue to balance)
+    if (party.balance !== undefined) {
+      party.balance = Number(party.balance) + calculatedDue
     }
 
+    setRecentOrder({
+      ...newTxn,
+      partyName: party.name,
+      partyPhone: party.phone,
+      partyAddress: party.address,
+      previousBalance: balance,
+      newBalance: Number(balance) + calculatedDue
+    })
+
     // Reset Form
-    setSelectedProduct(null)
-    setSearchTerm('')
-    setQty(1)
-    setItemDue('')
+    setCartItems([])
+    setCashPaid('')
     setOrderOpen(false)
+    setMemoModalOpen(true)
   }
 
   const safeBdt = (val: any) => {
-    try { return bdt(val ?? 0) } catch { return `${val ?? 0} টাকা` }
+    const num = Number(val)
+    if (isNaN(num)) return '০ টাকা'
+    try { return bdt(num) } catch { return `${num} টাকা` }
   }
 
   const reminderText = `প্রিয় ${party.name ?? ''}, আমাদের কাছে আপনার ${safeBdt(
@@ -327,134 +375,127 @@ export default function PartyDetailPage({
         </DialogContent>
       </Dialog>
 
-      {/* Smart Inventory New Order Modal */}
+      {/* Professional Multi-Item Order Modal */}
       <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>নতুন অর্ডার ও স্টক চেক</DialogTitle>
+            <DialogTitle>নতুন অর্ডার ও মেমো তৈরি (হোলসেল)</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreateOrder} className="space-y-3">
-            {!selectedProduct ? (
-              <div className="space-y-2">
-                <Label>পণ্য খুঁজুন (যেমন: চিনি, চাল)</Label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    className="pl-9"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="নাম লিখে খুঁজুন..."
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-48 overflow-y-auto space-y-1.5 mt-2 border border-border rounded-xl p-1.5 bg-muted/30">
-                  {filteredProducts.map((p) => {
-                    const outOfStock = p.stock <= 0
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => {
-                          setSelectedProduct(p)
-                          setQty(1)
-                        }}
-                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                          outOfStock ? 'bg-destructive/10 opacity-70' : 'bg-card hover:bg-secondary/50'
-                        }`}
-                      >
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">{p.name}</p>
-                          <p className="text-[11px] text-muted-foreground">মূল্য: {safeBdt(p.price)}</p>
-                        </div>
-                        <div className="text-right">
-                          {outOfStock ? (
-                            <span className="text-[11px] font-bold text-destructive">০ স্টক</span>
-                          ) : (
-                            <span className="text-[11px] font-medium text-primary">স্টক: {toBn(p.stock)} টি</span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                  {filteredProducts.length === 0 && (
-                    <p className="p-4 text-center text-xs text-muted-foreground">কোনো পণ্য পাওয়া যায়নি</p>
-                  )}
-                </div>
+          <form onSubmit={handleCreateOrder} className="space-y-4">
+            {/* Product Search */}
+            <div className="space-y-2">
+              <Label>পণ্য সার্চ করে কার্টে যোগ করুন</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="পণ্যের নাম লিখুন (যেমন: চিনি, চাল)..."
+                />
               </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between bg-secondary/50 p-2.5 rounded-xl border border-border">
-                  <div>
-                    <p className="text-xs text-muted-foreground">নির্বাচিত পণ্য</p>
-                    <p className="text-sm font-bold text-foreground">{selectedProduct.name}</p>
-                    <p className="text-xs text-primary font-semibold mt-0.5">দর: {safeBdt(selectedProduct.price)}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs h-7 px-2 text-destructive"
-                    onClick={() => setSelectedProduct(null)}
-                  >
-                    পরিবর্তন
-                  </Button>
-                </div>
-
-                {/* Quantity Counter with +/- */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <Label>পরিমাণ / পিস</Label>
-                    <span className={`font-medium ${selectedProduct.stock === 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
-                      মজুদ আছে: {toBn(selectedProduct.stock)} টি
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={() => setQty(Math.max(1, qty - 1))}
+              {searchTerm && (
+                <div className="max-h-36 overflow-y-auto space-y-1 border border-border rounded-xl p-1 bg-muted/50">
+                  {filteredProducts.map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => handleAddToCart(p)}
+                      className="flex items-center justify-between p-2 rounded-lg bg-card hover:bg-secondary cursor-pointer text-xs"
                     >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Input
-                      type="number"
-                      className="text-center font-bold"
-                      value={qty}
-                      onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={() => setQty(qty + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {qty > selectedProduct.stock && (
-                    <p className="text-[11px] text-destructive flex items-center gap-1 mt-1">
-                      <AlertCircle className="h-3 w-3" /> স্টকে পর্যাপ্ত পণ্য নেই (০ স্টক / অপর্যাপ্ত)
-                    </p>
+                      <span className="font-semibold text-foreground">{p.name}</span>
+                      <span className="text-primary font-medium">{safeBdt(p.price)} (স্টক: {toBn(p.stock)})</span>
+                    </div>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <p className="p-2 text-center text-xs text-muted-foreground">পণ্য পাওয়া যায়নি</p>
                   )}
                 </div>
+              )}
+            </div>
 
-                {/* Auto Price Display */}
-                <div className="rounded-xl bg-card p-3 border border-border flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">মোট প্রাক-মূল্য:</span>
-                  <span className="text-base font-bold text-primary">{safeBdt(calculatedTotal)}</span>
+            {/* Cart Items Table */}
+            <div className="space-y-2">
+              <Label>নির্বাচিত পণ্যসমূহ ({toBn(cartItems.length)} টি)</Label>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {cartItems.map((item) => {
+                  const itemTotal = item.price * item.qty
+                  const isOverStock = item.qty > item.stock
+                  return (
+                    <div key={item.id} className="p-2.5 rounded-xl bg-card border border-border flex flex-col gap-1.5 shadow-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-foreground">{item.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">দর: {safeBdt(item.price)}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateCartQty(item.id, -1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="font-bold w-6 text-center">{toBn(item.qty)}</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateCartQty(item.id, 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <span className="font-bold text-primary">{safeBdt(itemTotal)}</span>
+                      </div>
+                      {isOverStock && (
+                        <p className="text-[10px] text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" /> স্টকে আছে মাত্র {toBn(item.stock)} টি!
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+                {cartItems.length === 0 && (
+                  <div className="p-6 text-center border border-dashed border-border rounded-xl text-xs text-muted-foreground">
+                    এখনো কোনো পণ্য যোগ করা হয়নি। ওপর থেকে সার্চ করে যোগ করুন।
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Financial Summary Calculation */}
+            {cartItems.length > 0 && (
+              <div className="rounded-xl bg-secondary/50 p-3 space-y-2 border border-border text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">সর্বমোট মূল্য:</span>
+                  <span className="font-bold text-foreground text-sm">{safeBdt(grandTotal)}</span>
                 </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="item-due">বাকি টাকা (যদি থাকে)</Label>
+                <div className="flex justify-between items-center gap-2">
+                  <Label htmlFor="cash-paid" className="text-muted-foreground whitespace-nowrap">নগদ প্রদান (টাকা):</Label>
                   <Input
-                    id="item-due"
+                    id="cash-paid"
                     inputMode="numeric"
-                    value={itemDue}
-                    onChange={(e) => setItemDue(e.target.value)}
+                    className="h-8 w-28 text-right font-bold"
+                    value={cashPaid}
+                    onChange={(e) => setCashPaid(e.target.value)}
                     placeholder="০"
                   />
+                </div>
+                <div className="flex justify-between border-t border-border pt-2 text-sm font-bold">
+                  <span className="text-destructive">বর্তমান বকেয়া:</span>
+                  <span className="text-destructive">{safeBdt(calculatedDue)}</span>
                 </div>
               </div>
             )}
@@ -463,12 +504,104 @@ export default function PartyDetailPage({
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isStockOut}
+                disabled={cartItems.length === 0 || hasStockError}
               >
-                {isStockOut ? 'স্টক আউট / অপর্যাপ্ত পরিমাণ' : 'অর্ডার নিশ্চিত করুন ও মেমো তৈরি করুন'}
+                {hasStockError ? 'স্টক অপর্যাপ্ত' : 'অর্ডার নিশ্চিত করুন ও মেমো তৈরি করুন'}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF / Printable Memo Modal */}
+      <Dialog open={memoModalOpen} onOpenChange={setMemoModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex justify-between items-center">
+              <span>ক্যাশ মেমো / ইনভয়েস</span>
+              <div className="flex gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4" />
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          {recentOrder && (
+            <div id="printable-memo" className="space-y-4 p-4 rounded-xl bg-card border border-border text-xs">
+              <div className="text-center border-b border-border pb-3">
+                <h2 className="text-base font-bold text-primary">Shahriar Enterprise</h2>
+                <p className="text-[11px] text-muted-foreground">Govt. Enlisted ABC Contractor Builders, Suppliers</p>
+                <p className="text-[11px] font-semibold mt-1">ক্যাশ মেমো / চালান কপি</p>
+              </div>
+
+              <div className="flex justify-between text-[11px]">
+                <div>
+                  <p><span className="text-muted-foreground">গ্রাহক:</span> <strong className="text-foreground">{recentOrder.partyName}</strong></p>
+                  <p><span className="text-muted-foreground">ঠিকানা:</span> {recentOrder.partyAddress || 'প্রযোজ্য নয়'}</p>
+                  <p><span className="text-muted-foreground">মোবাইল:</span> {recentOrder.partyPhone}</p>
+                </div>
+                <div className="text-right">
+                  <p><span className="text-muted-foreground">তারিখ:</span> {bnDate(recentOrder.date)}</p>
+                  <p><span className="text-muted-foreground">মেমো আইডি:</span> #{recentOrder.id.slice(-6)}</p>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-left border-collapse text-[11px]">
+                  <thead>
+                    <tr className="bg-secondary/70 border-b border-border text-foreground">
+                      <th className="p-2">পণ্যের নাম</th>
+                      <th className="p-2 text-center">পরিমাণ</th>
+                      <th className="p-2 text-right">দর</th>
+                      <th className="p-2 text-right">মোট</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentOrder.items.map((item: any, idx: number) => (
+                      <tr key={idx} className="border-b border-border/50">
+                        <td className="p-2 font-medium">{item.name}</td>
+                        <td className="p-2 text-center">{toBn(item.qty)}</td>
+                        <td className="p-2 text-right">{safeBdt(item.price)}</td>
+                        <td className="p-2 text-right font-semibold">{safeBdt(item.price * item.qty)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bill Calculation */}
+              <div className="space-y-1.5 pt-2 border-t border-border text-right text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">সর্বমোট বিল:</span>
+                  <span className="font-bold">{safeBdt(recentOrder.total)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">নগদ প্রদান:</span>
+                  <span className="font-semibold">{safeBdt(recentOrder.cashPaid)}</span>
+                </div>
+                <div className="flex justify-between text-destructive">
+                  <span>বর্তমান ক্রয়ের বকেয়া:</span>
+                  <span className="font-bold">{safeBdt(recentOrder.due)}</span>
+                </div>
+                <div className="flex justify-between border-t border-border pt-1 font-bold text-foreground">
+                  <span>পূর্বের বকেয়া সহ মোট বকেয়া:</span>
+                  <span>{safeBdt(recentOrder.newBalance)}</span>
+                </div>
+              </div>
+
+              <div className="text-center pt-4 border-t border-border text-[10px] text-muted-foreground">
+                <p>পণ্য বিক্রয়ের পর ফেরত নেওয়া হয় না। আমাদের সাথে থাকার জন্য ধন্যবাদ।</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-2">
+            <Button onClick={() => setMemoModalOpen(false)} className="w-full">
+              সম্পন্ন করুন
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Screen>
