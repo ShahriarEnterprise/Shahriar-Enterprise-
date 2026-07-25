@@ -38,12 +38,21 @@ export function TransactionForm({ type }: { type: TxnType }) {
   const [note, setNote] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const total = useMemo(() => items.reduce((s, i) => s + i.qty * i.price, 0), [items])
+  // নিরাপদ হিসাব করার লজিক (price এবং sellingPrice উভয় হ্যান্ডেল করার জন্য)
+  const total = useMemo(() => {
+    return items.reduce((s, i) => {
+      const unitPrice = Number(i.price ?? (i as any).sellingPrice ?? 0)
+      const qty = Number(i.qty ?? 0)
+      return s + (unitPrice * qty)
+    }, 0)
+  }, [items])
+
   const due = Math.max(0, total - (Number(paid) || 0))
 
   function addItem(productId: string) {
     const prod = products.find((p) => p.id === productId)
     if (!prod) return
+    const resolvedPrice = Number(prod.price ?? (prod as any).sellingPrice ?? (prod as any).buyPrice ?? 0)
     setItems((prev) => {
       if (prev.some((i) => i.productId === productId)) return prev
       return [
@@ -53,7 +62,7 @@ export function TransactionForm({ type }: { type: TxnType }) {
           name: prod.name,
           unit: prod.unit,
           qty: 1,
-          price: isSale ? prod.sellPrice : prod.buyPrice,
+          price: resolvedPrice,
         },
       ]
     })
@@ -136,57 +145,61 @@ export function TransactionForm({ type }: { type: TxnType }) {
             </Button>
           </div>
 
-          {items.map((i) => (
-            <div key={i.productId} className="rounded-2xl bg-card p-3 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <p className="flex-1 text-sm font-medium text-card-foreground">{i.name}</p>
-                <button
-                  type="button"
-                  onClick={() => removeItem(i.productId)}
-                  aria-label="সরান"
-                  className="text-muted-foreground"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+          {items.map((i) => {
+            const unitPrice = Number(i.price ?? (i as any).sellingPrice ?? 0)
+            const subtotal = unitPrice * Number(i.qty ?? 0)
+            return (
+              <div key={i.productId} className="rounded-2xl bg-card p-3 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="flex-1 text-sm font-medium text-card-foreground">{i.name}</p>
                   <button
                     type="button"
-                    onClick={() => updateQty(i.productId, -1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground"
-                    aria-label="কমান"
+                    onClick={() => removeItem(i.productId)}
+                    aria-label="সরান"
+                    className="text-muted-foreground"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
-                  <span className="w-10 text-center text-sm font-semibold">
-                    {toBn(i.qty)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => updateQty(i.productId, 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-primary"
-                    aria-label="বাড়ান"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                  <span className="text-xs text-muted-foreground">{i.unit}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">৳</span>
-                  <Input
-                    inputMode="numeric"
-                    value={String(i.price)}
-                    onChange={(e) => updatePrice(i.productId, Number(e.target.value) || 0)}
-                    className="h-8 w-20 text-right text-sm"
-                  />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updateQty(i.productId, -1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground"
+                      aria-label="কমান"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="w-10 text-center text-sm font-semibold">
+                      {toBn(i.qty)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateQty(i.productId, 1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-primary"
+                      aria-label="বাড়ান"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                    <span className="text-xs text-muted-foreground">{i.unit}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">৳</span>
+                    <Input
+                      inputMode="numeric"
+                      value={String(i.price)}
+                      onChange={(e) => updatePrice(i.productId, Number(e.target.value) || 0)}
+                      className="h-8 w-20 text-right text-sm"
+                    />
+                  </div>
                 </div>
+                <p className="mt-2 text-right text-xs text-muted-foreground">
+                  সাবটোটাল: <span className="font-semibold text-foreground">{bdt(subtotal)}</span>
+                </p>
               </div>
-              <p className="mt-2 text-right text-xs text-muted-foreground">
-                সাবটোটাল: <span className="font-semibold text-foreground">{bdt(i.qty * i.price)}</span>
-              </p>
-            </div>
-          ))}
+            )
+          })}
 
           {items.length === 0 && (
             <div className="rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
@@ -247,25 +260,28 @@ export function TransactionForm({ type }: { type: TxnType }) {
             <DialogTitle>পণ্য নির্বাচন করুন</DialogTitle>
           </DialogHeader>
           <ul className="max-h-80 space-y-2 overflow-y-auto">
-            {available.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => addItem(p.id)}
-                  className="flex w-full items-center justify-between rounded-xl bg-muted p-3 text-left"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      স্টক: {toBn(p.stock)} {p.unit}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-primary">
-                    {bdt(isSale ? p.sellPrice : p.buyPrice)}
-                  </span>
-                </button>
-              </li>
-            ))}
+            {available.map((p) => {
+              const itemPrice = Number(p.price ?? (p as any).sellingPrice ?? (p as any).buyPrice ?? 0)
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => addItem(p.id)}
+                    className="flex w-full items-center justify-between rounded-xl bg-muted p-3 text-left"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{p.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        স্টক: {toBn(p.stock)} {p.unit}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-primary">
+                      {bdt(itemPrice)}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
             {available.length === 0 && (
               <li className="p-4 text-center text-sm text-muted-foreground">
                 সব পণ্য যোগ করা হয়েছে
