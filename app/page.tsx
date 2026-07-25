@@ -52,17 +52,17 @@ export default function HomePage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-muted">
       {/* Header + hero */}
-      <div className="bg-primary px-4 pb-16 pt-5 text-primary-foreground">
+      <div className="bg-[#0A0A0A] border-b border-[#D4AF37]/20 px-4 pb-16 pt-5 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-primary-foreground/80">স্বাগতম</p>
-            <h1 className="text-lg font-semibold">Shahriar Enterprise</h1>
+            <p className="text-xs text-neutral-400">স্বাগতম</p>
+            <h1 className="text-lg font-semibold text-[#D4AF37]">Shahriar Enterprise</h1>
           </div>
           <Link
             href="/more"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-sm font-semibold"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0A0A0A] border border-[#D4AF37]/60 overflow-hidden shadow-md shadow-[#D4AF37]/20"
           >
-            SE
+            <img src="/icon.svg" alt="Logo" className="w-full h-full object-cover" />
           </Link>
         </div>
       </div>
