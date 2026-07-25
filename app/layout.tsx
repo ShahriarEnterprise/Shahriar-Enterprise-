@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Hind_Siliguri } from 'next/font/google'
 import { StoreProvider } from '@/lib/store'
+import { SplashScreen } from '@/components/splash-screen'
 import './globals.css'
 
 const hindSiliguri = Hind_Siliguri({
@@ -13,15 +14,14 @@ const hindSiliguri = Hind_Siliguri({
 
 export const metadata: Metadata = {
   title: 'Shahriar Enterprise — ব্যবসার ডিজিটাল খাতা',
-  description:
-    'পাইকারি ও ডিলারশিপ ব্যবসার সম্পূর্ণ হিসাব — স্টক, পার্টি খাতা, বিক্রি-কেনা, খরচ ও লাভ-ক্ষতির রিপোর্ট এক অ্যাপেই।',
+  description: 'Govt. Enlisted ABC Contractor Builders, Suppliers',
   generator: 'v0.app',
   manifest: '/manifest.json',
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light',
-  themeColor: '#1a7a5e',
+  colorScheme: 'dark',
+  themeColor: '#D4AF37',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -34,11 +34,12 @@ export default function RootLayout({
   children: ReactNode
 }>) {
   return (
-    <html lang="bn" className={`${hindSiliguri.variable} bg-muted`}>
+    <html lang="bn" className={`${hindSiliguri.variable} bg-[#0A0A0A]`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased bg-[#0A0A0A] text-foreground">
+        <SplashScreen />
         <StoreProvider>{children}</StoreProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
