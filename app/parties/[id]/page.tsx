@@ -1,13 +1,14 @@
 'use client'
 
 import { use, useState } from 'react'
-import { notFound } from 'next/navigation'
+import { notFound, useRouter } from 'next/navigation'
 import {
   Phone,
   MessageSquare,
   HandCoins,
   ArrowDownLeft,
   ArrowUpRight,
+  ShoppingCart,
 } from 'lucide-react'
 import { Screen } from '@/components/screen'
 import { Button } from '@/components/ui/button'
@@ -29,9 +30,9 @@ export default function PartyDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const router = useRouter()
   const store = useStore()
   
-  // Safe array fallback to prevent undefined errors
   const parties = Array.isArray(store?.parties) ? store.parties : []
   const transactions = Array.isArray(store?.transactions) ? store.transactions : []
   const collectDue = store?.collectDue
@@ -46,6 +47,11 @@ export default function PartyDetailPage({
   const balance = party.balance ?? 0
   const owes = balance > 0
   const settled = balance === 0
+
+  // Calculate total goods/sales taken so far by this party
+  const totalSaleAmount = ledger
+    .filter((t) => t?.type === 'বিক্রি')
+    .reduce((acc, t) => acc + (t?.total ?? 0), 0)
 
   function handleCollect() {
     const val = Number(amount)
@@ -63,7 +69,7 @@ export default function PartyDetailPage({
   return (
     <Screen title={party.name ?? 'পার্টি'} subtitle={party.type ?? ''} back showNav={false}>
       <div className="space-y-4">
-        {/* Balance hero */}
+        {/* Balance & Stats hero */}
         <div className="rounded-2xl bg-card p-5 text-center shadow-sm">
           <p className="text-xs text-muted-foreground">
             {settled ? 'কোনো বাকি নেই' : owes ? 'পার্টির কাছে পাবো' : 'পার্টিকে দিবো'}
@@ -75,39 +81,59 @@ export default function PartyDetailPage({
           >
             {bdt(Math.abs(balance))}
           </p>
-          {party.address && (
-            <p className="mt-1 text-xs text-muted-foreground">{party.address}</p>
-          )}
+          
+          {/* Summary stats */}
+          <div className="mt-3 flex justify-around border-t border-border pt-3 text-xs text-muted-foreground">
+            <div>
+              <span>মোট মাল নেওয়া: </span>
+              <span className="font-semibold text-foreground">{bdt(totalSaleAmount)}</span>
+            </div>
+            {party.address && (
+              <div>
+                <span>ঠিকানা: </span>
+                <span className="font-semibold text-foreground">{party.address}</span>
+              </div>
+            )}
+          </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          {/* Action Grid */}
+          <div className="mt-4 grid grid-cols-4 gap-2">
             <Button
               variant="secondary"
-              className="flex-col gap-1 h-auto py-2.5"
+              className="flex-col gap-1 h-auto py-2.5 px-1"
               asChild
             >
               <a href={`tel:${party.phone ?? ''}`}>
                 <Phone className="h-4 w-4" />
-                <span className="text-xs">কল</span>
+                <span className="text-[11px]">কল</span>
               </a>
             </Button>
             <Button
               variant="secondary"
-              className="flex-col gap-1 h-auto py-2.5"
+              className="flex-col gap-1 h-auto py-2.5 px-1"
               asChild
             >
               <a
                 href={`sms:${party.phone ?? ''}?body=${encodeURIComponent(reminderText)}`}
               >
                 <MessageSquare className="h-4 w-4" />
-                <span className="text-xs">তাগাদা</span>
+                <span className="text-[11px]">তাগাদা</span>
               </a>
             </Button>
             <Button
-              className="flex-col gap-1 h-auto py-2.5"
+              variant="secondary"
+              className="flex-col gap-1 h-auto py-2.5 px-1"
               onClick={() => setCollectOpen(true)}
             >
               <HandCoins className="h-4 w-4" />
-              <span className="text-xs">আদায়</span>
+              <span className="text-[11px]">আদায়</span>
+            </Button>
+            <Button
+              className="flex-col gap-1 h-auto py-2.5 px-1"
+              onClick={() => router.push(`/transactions/new?partyId=${party.id}`)}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span className="text-[11px]">নতুন অর্ডার</span>
             </Button>
           </div>
         </div>
@@ -115,7 +141,7 @@ export default function PartyDetailPage({
         {/* Ledger */}
         <div>
           <h2 className="mb-2 px-1 text-sm font-semibold text-foreground">
-            লেনদেনের খতিয়ান
+            লেনদেনের খতিয়ান ও মেমোসমূহ
           </h2>
           <ul className="space-y-2.5">
             {ledger.map((t) => {
@@ -161,7 +187,7 @@ export default function PartyDetailPage({
             })}
             {ledger.length === 0 && (
               <li className="rounded-2xl bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
-                এখনো কোনো লেনদেন নেই
+                এখনো কোনো লেনদেন বা মেমো নেই
               </li>
             )}
           </ul>
