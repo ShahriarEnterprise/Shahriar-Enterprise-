@@ -2,10 +2,12 @@
 
 import { useStore } from '@/lib/store'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 
 export default function DashboardPage() {
   const { parties, products, transactions } = useStore()
+  const router = useRouter()
 
   // হিসাব নিকাশ
   const totalProducts = products.length
@@ -30,6 +32,20 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* ড্যাশবোর্ড টপ হেডার ও মেনু/সেটিংস বাটন */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h2 className="text-xs font-semibold text-gray-500">স্বাগতম,</h2>
+          <h1 className="text-sm font-bold text-emerald-800">শাহরিয়ার এন্টারপ্রাইজ</h1>
+        </div>
+        <button
+          onClick={() => router.push('/more')}
+          className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-100 transition shadow-sm"
+        >
+          <span>⚙️</span> মেনু / সেটিংস
+        </button>
+      </div>
+
       {/* ওয়েলকাম ব্যানার */}
       <div className="bg-gradient-to-r from-emerald-800 via-teal-700 to-cyan-800 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
