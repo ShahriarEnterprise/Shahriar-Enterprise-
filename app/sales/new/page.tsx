@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Product, Party, TransactionItem } from '@/lib/types';
 import { bdt, toBn } from '@/lib/format';
-import { ShoppingCart, Plus, Trash2, CheckCircle, Search, FileText } from 'lucide-react';
+import { ShoppingCart, Search, CheckCircle } from 'lucide-react';
 import { BottomNav } from '@/components/bottom-nav';
 
 export default function SalesPage() {
@@ -25,7 +25,7 @@ export default function SalesPage() {
     try {
       const [prodRes, partyRes] = await Promise.all([
         supabase.from('products').select('*').order('name'),
-        supabase.from('parties').select('*').eq('type', 'customer').order('name')
+        supabase.from('parties').select('*').eq('type', 'customer').order('name'),
       ]);
 
       if (prodRes.error) throw prodRes.error;
@@ -117,7 +117,7 @@ export default function SalesPage() {
 
       if (txnError) throw txnError;
 
-      // 2. Update Stock Quantities & Insert Ledger Entry
+      // 2. Update Stock Quantities
       for (const item of cart) {
         const prod = products.find((p) => p.id === item.product_id);
         if (prod) {
@@ -129,7 +129,7 @@ export default function SalesPage() {
         }
       }
 
-      // Update Party Balance (Due amount added)
+      // 3. Update Party Balance & Insert Ledger Entry
       const dueAmount = totalAmount - parsedPaid;
       const targetParty = parties.find((p) => p.id === selectedPartyId);
       if (targetParty) {
@@ -139,7 +139,6 @@ export default function SalesPage() {
           .update({ balance: newBalance })
           .eq('id', selectedPartyId);
 
-        // Insert Ledger Entry
         await supabase.from('ledger_entries').insert([
           {
             user_id: userId,
@@ -166,7 +165,9 @@ export default function SalesPage() {
     }
   };
 
-  const filteredProducts = products.filter((p) => p.name.toLowerCase().includes(searchProduct.toLowerCase()));
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(searchProduct.toLowerCase())
+  );
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-muted pb-24">
@@ -186,7 +187,9 @@ export default function SalesPage() {
           >
             <option value="">-- কাস্টমার বা দোকান সিলেক্ট করুন --</option>
             {parties.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.phone})</option>
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.phone})
+              </option>
             ))}
           </select>
         </div>
@@ -197,14 +200,19 @@ export default function SalesPage() {
             <ShoppingCart className="h-4 w-4 text-[#D4AF37]" /> নির্বাচিত পণ্যসমূহ ({toBn(cart.length)})
           </h2>
           {cart.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-py-2">নিচের তালিকা থেকে পণ্য যোগ করুন</p>
+            <p className="text-xs text-muted-foreground py-2">নিচের তালিকা থেকে পণ্য যোগ করুন</p>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {cart.map((item) => (
-                <div key={item.product_id} className="flex items-center justify-between gap-2 border-b border-border pb-2 text-xs">
+                <div
+                  key={item.product_id}
+                  className="flex items-center justify-between gap-2 border-b border-border pb-2 text-xs"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-card-foreground truncate">{item.name}</p>
-                    <p className="text-muted-foreground">৳{item.unit_price} × {toBn(item.quantity)} {item.unit}</p>
+                    <p className="text-muted-foreground">
+                      ৳{item.unit_price} × {toBn(item.quantity)} {item.unit}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-primary">{bdt(item.total)}</span>
@@ -227,16 +235,16 @@ export default function SalesPage() {
             </div>
           )}
 
-          <div className="pt-2 border-t border-border space-y-1.5 text-sm">
+          <div className="pt-2 border-t border-border space-y-2 text-sm">
             <div className="flex justify-between font-bold">
               <span>মোট পরিমাণ:</span>
               <span className="text-primary">{bdt(totalAmount)}</span>
             </div>
 
-            <div className="pt-1 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <input
                 type="number"
-                placeholder="প্রদত্ত টাকা (Paid)"
+                placeholder="প্রদত্ত টাকা (Paid amount)"
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(e.target.value)}
                 className="w-full rounded-xl border border-border bg-background p-2.5 text-xs outline-none text-card-foreground"
@@ -268,10 +276,15 @@ export default function SalesPage() {
 
           <div className="space-y-2">
             {filteredProducts.map((p) => (
-              <div key={p.id} className="rounded-xl bg-card p-3 shadow-sm flex items-center justify-between gap-2 border border-border">
+              <div
+                key={p.id}
+                className="rounded-xl bg-card p-3 shadow-sm flex items-center justify-between gap-2 border border-border"
+              >
                 <div>
                   <h4 className="text-xs font-semibold text-card-foreground">{p.name}</h4>
-                  <p className="text-[10px] text-muted-foreground">মূল্য: {bdt(p.selling_price)} · স্টক: {toBn(p.current_stock)} {p.unit}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    মূল্য: {bdt(p.selling_price)} · স্টক: {toBn(p.current_stock)} {p.unit}
+                  </p>
                 </div>
                 <button
                   onClick={() => addToCart(p)}
