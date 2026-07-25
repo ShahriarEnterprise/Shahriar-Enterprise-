@@ -136,7 +136,7 @@ export interface StoreValue {
   updateProduct: (id: string, p: Partial<Product>) => void
   deleteProduct: (id: string) => void
   addParty: (p: Omit<Party, 'id' | 'balance' | 'createdAt'> & { balance?: number }) => void
-  addTransaction: (t: { type: TxnType; partyId: string; items: SaleItem[]; paid: number; note?: string }) => void
+  addTransaction: (t: { type: TxnType; partyId: string; partyName?: string; items: SaleItem[]; paid: number; note?: string }) => void
   collectDue: (partyId: string, amount: number) => void
   addExpense: (e: Omit<Expense, 'id' | 'date'> & { date?: string }) => void
   addEmployee: (e: Omit<Employee, 'id'>) => void
@@ -209,7 +209,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const addTransaction = useCallback(
-    ({ type, partyId, items, paid, note }: { type: TxnType; partyId: string; items: SaleItem[]; paid: number; note?: string }) => {
+    ({ type, partyId, partyName, items, paid, note }: { type: TxnType; partyId: string; partyName?: string; items: SaleItem[]; paid: number; note?: string }) => {
       const total = items.reduce((s, i) => s + (Number(i.price ?? 0) * Number(i.qty ?? 0)), 0)
       const due = Math.max(0, total - Number(paid ?? 0))
       const party = parties.find((p) => p.id === partyId)
@@ -218,7 +218,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         id: 'txn_' + uid(),
         type,
         partyId,
-        partyName: party?.name ?? 'অজানা',
+        partyName: partyName ?? party?.name ?? 'অজানা',
         items,
         total,
         paid: Number(paid ?? 0),
