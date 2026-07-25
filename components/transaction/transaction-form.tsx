@@ -74,18 +74,21 @@ export default function TransactionForm({ partyId: initialPartyId, onClose, defa
       return
     }
 
+    const newTxId = 'tx_' + Date.now()
+
     addTransaction({
+      id: newTxId,
       type: defaultType,
       partyId: selectedPartyId,
       partyName: selectedParty?.name,
       items: selectedItems,
       paid: Number(paid || 0),
       note: `${memoNo} | ${note}`,
+      date: new Date().toISOString(),
     })
 
-    alert('সফলভাবে মেমো তৈরি এবং অর্ডার সম্পন্ন হয়েছে!')
     if (onClose) onClose()
-    router.push(selectedPartyId ? `/parties/${selectedPartyId}` : '/')
+    router.push(`/sales/invoice/${newTxId}`)
   }
 
   return (
@@ -255,5 +258,4 @@ export default function TransactionForm({ partyId: initialPartyId, onClose, defa
   )
 }
 
-// উভয় ফরম্যাটের ইম্পোর্ট নিশ্চিত করার জন্য (Fixes Build Import Error)
 export { TransactionForm }
