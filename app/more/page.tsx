@@ -12,6 +12,7 @@ import {
   Settings,
   Package,
   FileText,
+  LogOut,
 } from "lucide-react"
 
 const groups = [
@@ -47,9 +48,16 @@ const toneClass: Record<string, string> = {
 }
 
 export default function MorePage() {
+  const handleLogout = () => {
+    if (confirm("আপনি কি নিশ্চিতভাবে অ্যাকাউন্ট থেকে বের হতে চান?")) {
+      localStorage.clear()
+      window.location.reload()
+    }
+  }
+
   return (
     <Screen title="আরও" subtitle="সব ফিচার ও সেটিংস">
-      <div className="space-y-6">
+      <div className="space-y-6 pb-12">
         {groups.map((g) => (
           <section key={g.title} className="space-y-3">
             <h2 className="text-sm font-semibold text-muted-foreground">{g.title}</h2>
@@ -71,6 +79,20 @@ export default function MorePage() {
             </div>
           </section>
         ))}
+
+        {/* লগআউট বাটন সেクション */}
+        <section className="space-y-3 pt-4 border-t border-border">
+          <h2 className="text-sm font-semibold text-destructive">অ্যাকাউন্ট কন্ট্রোল</h2>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-all font-semibold text-sm"
+          >
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/20">
+              <LogOut className="h-5 w-5" />
+            </span>
+            <span>লগআউট (Logout) / ডাটা রিসেট</span>
+          </button>
+        </section>
       </div>
     </Screen>
   )
