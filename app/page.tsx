@@ -1,199 +1,177 @@
 'use client'
 
-import Link from 'next/link'
-import {
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  ArrowDownLeft,
-  AlertTriangle,
-  ChevronRight,
-} from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { bdt, bnRelative, toBn } from '@/lib/format'
-import { QuickActions } from '@/components/home/quick-actions'
-import { BottomNav } from '@/components/bottom-nav'
+import Link from 'next/link'
+import { useMemo } from 'react'
 
-function isToday(iso: string) {
-  const d = new Date(iso)
-  const n = new Date()
-  return (
-    d.getDate() === n.getDate() &&
-    d.getMonth() === n.getMonth() &&
-    d.getFullYear() === n.getFullYear()
-  )
-}
+export default function DashboardPage() {
+  const { parties, products, transactions } = useStore()
 
-export default function HomePage() {
-  const { products, parties, transactions, expenses } = useStore()
+  // হিসাব নিকাশ
+  const totalProducts = products.length
+  const totalStockQty = products.reduce((sum, p) => sum + Number(p.stock || 0), 0)
+  
+  const totalParties = parties.length
+  const totalDue = parties.reduce((sum, p) => sum + Number(p.due || 0), 0)
 
-  const todaySales = transactions
-    .filter((t) => t.type === 'বিক্রি' && isToday(t.date))
-    .reduce((s, t) => s + t.total, 0)
-  const todayPurchase = transactions
-    .filter((t) => t.type === 'কেনা' && isToday(t.date))
-    .reduce((s, t) => s + t.total, 0)
-  const todayExpense = expenses
-    .filter((e) => isToday(e.date))
-    .reduce((s, e) => s + e.amount, 0)
+  const totalSales = useMemo(() => {
+    return transactions
+      .filter((t) => t.type === 'বিক্রি')
+      .reduce((sum, t) => sum + Number(t.paid || 0), 0)
+  }, [transactions])
 
-  const receivable = parties
-    .filter((p) => p.balance > 0)
-    .reduce((s, p) => s + p.balance, 0)
-  const payable = parties
-    .filter((p) => p.balance < 0)
-    .reduce((s, p) => s + Math.abs(p.balance), 0)
+  const totalPurchase = useMemo(() => {
+    return transactions
+      .filter((t) => t.type === 'ক্রয়')
+      .reduce((sum, t) => sum + Number(t.paid || 0), 0)
+  }, [transactions])
 
-  const stockValue = products.reduce((s, p) => s + p.stock * p.buyPrice, 0)
-  const lowStock = products.filter((p) => p.stock <= p.lowStockAlert)
-
-  const recent = transactions.slice(0, 5)
+  const recentTransactions = transactions.slice(-5).reverse()
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-muted">
-      {/* Header + hero */}
-      <div className="bg-[#0A0A0A] border-b border-[#D4AF37]/20 px-4 pb-16 pt-5 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-neutral-400">স্বাগতম</p>
-            <h1 className="text-lg font-semibold text-[#D4AF37]">Shahriar Enterprise</h1>
-          </div>
-          <Link
-            href="/more"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0A0A0A] border border-[#D4AF37]/60 overflow-hidden shadow-md shadow-[#D4AF37]/20"
-          >
-            <img src="/icon.svg" alt="Logo" className="w-full h-full object-cover" />
-          </Link>
-        </div>
-      </div>
-
-      <div className="-mt-12 flex-1 space-y-4 px-4 pb-28">
-        {/* Balance card */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-card p-4 shadow-sm">
-            <div className="flex items-center gap-1.5 text-primary">
-              <ArrowDownLeft className="h-4 w-4" />
-              <span className="text-xs font-medium text-muted-foreground">
-                মোট বাকি আদায়যোগ্য
-              </span>
-            </div>
-            <p className="mt-1.5 text-xl font-bold text-primary">{bdt(receivable)}</p>
-          </div>
-          <div className="rounded-2xl bg-card p-4 shadow-sm">
-            <div className="flex items-center gap-1.5 text-destructive">
-              <ArrowUpRight className="h-4 w-4" />
-              <span className="text-xs font-medium text-muted-foreground">
-                মোট পরিশোধযোগ্য
-              </span>
-            </div>
-            <p className="mt-1.5 text-xl font-bold text-destructive">{bdt(payable)}</p>
-          </div>
-        </div>
-
-        {/* Today summary */}
-        <div className="rounded-2xl bg-card p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-card-foreground">আজকের হিসাব</h2>
-            <span className="text-xs text-muted-foreground">আজ</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-secondary py-3">
-              <TrendingUp className="mx-auto h-5 w-5 text-primary" />
-              <p className="mt-1 text-sm font-bold text-card-foreground">{bdt(todaySales)}</p>
-              <p className="text-[11px] text-muted-foreground">বিক্রি</p>
-            </div>
-            <div className="rounded-xl bg-blue-50 py-3">
-              <TrendingDown className="mx-auto h-5 w-5 text-chart-4" />
-              <p className="mt-1 text-sm font-bold text-card-foreground">{bdt(todayPurchase)}</p>
-              <p className="text-[11px] text-muted-foreground">কেনা</p>
-            </div>
-            <div className="rounded-xl bg-red-50 py-3">
-              <TrendingDown className="mx-auto h-5 w-5 text-destructive" />
-              <p className="mt-1 text-sm font-bold text-card-foreground">{bdt(todayExpense)}</p>
-              <p className="text-[11px] text-muted-foreground">খরচ</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick actions */}
+    <div className="space-y-6 pb-12">
+      {/* ওয়েলকাম ব্যানার */}
+      <div className="bg-gradient-to-r from-emerald-800 via-teal-700 to-cyan-800 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="mb-2 px-1 text-sm font-semibold text-foreground">দ্রুত অ্যাকশন</h2>
-          <QuickActions />
+          <h1 className="text-2xl font-bold tracking-wide">🏬 Shahriar Enterprise</h1>
+          <p className="text-emerald-100 text-sm mt-1">হোলসেল ও পাইকারি ব্যবসা পরিচালনার স্মার্ট ড্যাশবোর্ড</p>
         </div>
-
-        {/* Stock value + low stock */}
-        <div className="flex items-center justify-between rounded-2xl bg-card p-4 shadow-sm">
-          <div>
-            <p className="text-xs text-muted-foreground">বর্তমান স্টক মূল্য</p>
-            <p className="text-lg font-bold text-card-foreground">{bdt(stockValue)}</p>
-          </div>
+        <div className="flex flex-wrap gap-2">
           <Link
-            href="/products"
-            className="rounded-lg bg-secondary px-3 py-2 text-xs font-semibold text-primary"
+            href="/sales/new"
+            className="px-4 py-2.5 bg-white text-emerald-800 font-bold rounded-xl shadow-md hover:bg-emerald-50 transition-all text-sm flex items-center gap-2"
           >
-            স্টক দেখুন
+            <span>➕</span> নতুন বিক্রি / মেমো
           </Link>
-        </div>
-
-        {lowStock.length > 0 && (
           <Link
-            href="/products"
-            className="flex items-center gap-3 rounded-2xl border border-chart-2/30 bg-amber-50 p-3.5"
+            href="/purchase/new"
+            className="px-4 py-2.5 bg-emerald-900/60 border border-emerald-500/40 text-white font-bold rounded-xl shadow-md hover:bg-emerald-900 transition-all text-sm flex items-center gap-2 backdrop-blur-md"
           >
-            <AlertTriangle className="h-5 w-5 shrink-0 text-chart-2" />
-            <p className="flex-1 text-xs font-medium text-foreground">
-              {toBn(lowStock.length)}টি পণ্যের স্টক কমে গেছে — শীঘ্রই রিস্টক করুন
-            </p>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <span>📦</span> নতুন ক্রয়
           </Link>
-        )}
-
-        {/* Recent transactions */}
-        <div className="rounded-2xl bg-card shadow-sm">
-          <div className="flex items-center justify-between px-4 pt-4">
-            <h2 className="text-sm font-semibold text-card-foreground">সাম্প্রতিক লেনদেন</h2>
-            <Link href="/reports" className="text-xs font-medium text-primary">
-              সব দেখুন
-            </Link>
-          </div>
-          <ul className="mt-2 divide-y divide-border">
-            {recent.map((t) => {
-              const sale = t.type === 'বিক্রি'
-              return (
-                <li key={t.id} className="flex items-center gap-3 px-4 py-3">
-                  <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      sale ? 'bg-secondary text-primary' : 'bg-blue-50 text-chart-4'
-                    }`}
-                  >
-                    {sale ? (
-                      <ArrowDownLeft className="h-4 w-4" />
-                    ) : (
-                      <ArrowUpRight className="h-4 w-4" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-card-foreground">
-                      {t.partyName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t.type} · {bnRelative(t.date)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-card-foreground">{bdt(t.total)}</p>
-                    {t.due > 0 && (
-                      <p className="text-[11px] text-destructive">বাকি {bdt(t.due)}</p>
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
         </div>
       </div>
 
-      <BottomNav />
+      {/* মূল মেট্রিক কার্ডসমূহ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* মোট বিক্রি */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
+            📈
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500">মোট নগদ বিক্রি</p>
+            <h3 className="text-lg font-bold text-gray-800 mt-0.5">৳ {totalSales.toLocaleString('en-IN')}</h3>
+          </div>
+        </div>
+
+        {/* মোট বকেয়া */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-xl font-bold">
+            📒
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500">মোট কাস্টমার বকেয়া</p>
+            <h3 className="text-lg font-bold text-red-600 mt-0.5">৳ {totalDue.toLocaleString('en-IN')}</h3>
+          </div>
+        </div>
+
+        {/* মোট স্টক */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+            📦
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500">স্টকে মোট পণ্য</p>
+            <h3 className="text-lg font-bold text-gray-800 mt-0.5">{totalStockQty} টি ({totalProducts} আইটেম)</h3>
+          </div>
+        </div>
+
+        {/* মোট পার্টি */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold">
+            👥
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500">মোট কাস্টমার ও সাপ্লায়ার</p>
+            <h3 className="text-lg font-bold text-gray-800 mt-0.5">{totalParties} জন</h3>
+          </div>
+        </div>
+      </div>
+
+      {/* কুইক নেভিগেশন ও শর্টকাট */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link
+          href="/products"
+          className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all text-center group"
+        >
+          <span className="text-2xl block mb-1">🏷️</span>
+          <span className="text-sm font-bold text-gray-700 group-hover:text-emerald-700">পণ্য ক্যাটালগ</span>
+        </Link>
+        <Link
+          href="/parties"
+          className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all text-center group"
+        >
+          <span className="text-2xl block mb-1">👥</span>
+          <span className="text-sm font-bold text-gray-700 group-hover:text-emerald-700">পার্টি খাতা</span>
+        </Link>
+        <Link
+          href="/sales"
+          className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all text-center group"
+        >
+          <span className="text-2xl block mb-1">📜</span>
+          <span className="text-sm font-bold text-gray-700 group-hover:text-emerald-700">সকল মেমো</span>
+        </Link>
+        <Link
+          href="/reports"
+          className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all text-center group"
+        >
+          <span className="text-2xl block mb-1">📊</span>
+          <span className="text-sm font-bold text-gray-700 group-hover:text-emerald-700">রিপোর্ট ও হিসাব</span>
+        </Link>
+      </div>
+
+      {/* সাম্প্রতিক ট্রানজেকশন বা মেমো লিস্ট */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+          <h3 className="font-bold text-gray-800 text-base flex items-center gap-2">
+            <span>⚡</span> সাম্প্রতিক লেনদেনসমূহ
+          </h3>
+          <Link href="/sales" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700">
+            সব দেখুন →
+          </Link>
+        </div>
+        
+        <div className="divide-y divide-gray-100">
+          {recentTransactions.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">কোনো সাম্প্রতিক লেনদেন পাওয়া যায়নি</p>
+          ) : (
+            recentTransactions.map((tx) => (
+              <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                    tx.type === 'বিক্রি' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {tx.type === 'বিক্রি' ? 'বি' : 'ক্র'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{tx.partyName || 'খুচরা কাস্টমার'}</p>
+                    <p className="text-xs text-gray-500">{tx.note || tx.id}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gray-800">৳ {Number(tx.paid || 0).toLocaleString('en-IN')}</p>
+                  <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                    tx.type === 'বিক্রি' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}>
+                    {tx.type}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   )
 }
