@@ -48,7 +48,6 @@ export default function PartyDetailPage({
   const owes = balance > 0
   const settled = balance === 0
 
-  // Calculate total goods/sales taken so far by this party
   const totalSaleAmount = ledger
     .filter((t) => t?.type === 'বিক্রি')
     .reduce((acc, t) => acc + (t?.total ?? 0), 0)
@@ -82,7 +81,6 @@ export default function PartyDetailPage({
             {bdt(Math.abs(balance))}
           </p>
           
-          {/* Summary stats */}
           <div className="mt-3 flex justify-around border-t border-border pt-3 text-xs text-muted-foreground">
             <div>
               <span>মোট মাল নেওয়া: </span>
@@ -96,7 +94,6 @@ export default function PartyDetailPage({
             )}
           </div>
 
-          {/* Action Grid */}
           <div className="mt-4 grid grid-cols-4 gap-2">
             <Button
               variant="secondary"
@@ -194,7 +191,6 @@ export default function PartyDetailPage({
         </div>
       </div>
 
-      {/* Collect due dialog */}
       <Dialog open={collectOpen} onOpenChange={setCollectOpen}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
