@@ -61,9 +61,9 @@ export default function SettingsPage() {
             <AddStaffDialog onAdd={addEmployee} />
           </div>
           <div className="space-y-3">
-            {employees.map((emp) => (
+            {employees?.map((emp) => (
               <StaffCard key={emp.id} emp={emp} onToggle={toggleEmployee} />
-            ))}
+            )) || []}
           </div>
         </section>
 
@@ -144,11 +144,11 @@ function StaffCard({
         </div>
         <Separator className="my-3" />
         <div className="flex flex-wrap gap-1.5">
-          {emp.permissions.map((p) => (
+          {emp.permissions?.map((p) => (
             <Badge key={p} variant="secondary" className="font-normal">
               {p}
             </Badge>
-          ))}
+          )) || []}
         </div>
       </CardContent>
     </Card>
