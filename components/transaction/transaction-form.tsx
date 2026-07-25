@@ -80,9 +80,12 @@ export function TransactionForm({ type }: { type: TxnType }) {
 
   function submit() {
     if (!partyId || items.length === 0) return
+    const selectedParty = parties.find((p) => p.id === partyId)
+    
     addTransaction({
       type,
       partyId,
+      partyName: selectedParty ? selectedParty.name : 'অজানা পার্টি',
       items,
       paid: Number(paid) || 0,
       note: note.trim() || undefined,
