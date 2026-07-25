@@ -1,8 +1,6 @@
 'use client'
 
-import { use } from 'react'
-import { useState } from 'react'
-import { notFound } from 'next/navigation'
+import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Phone } from 'lucide-react'
@@ -34,6 +32,11 @@ export default function PartyDetailPage({
   const { id } = use(params)
   const router = useRouter()
   const store = useStore()
+
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   const parties = Array.isArray(store?.parties) ? store.parties : []
   const transactions = Array.isArray(store?.transactions) ? store.transactions : []
@@ -42,8 +45,23 @@ export default function PartyDetailPage({
   const [collectOpen, setCollectOpen] = useState(false)
   const [amount, setAmount] = useState('')
 
+  // Show loading while store hydrates
+  if (!mounted) {
+    return (
+      <Screen title="লোড হচ্ছে..." back showNav={false}>
+        <div className="p-8 text-center text-sm text-muted-foreground">তথ্য লোড হচ্ছে...</div>
+      </Screen>
+    )
+  }
+
   const party = parties.find((p) => p?.id === id)
-  if (!party) notFound()
+  if (!party) {
+    return (
+      <Screen title="পাওয়া যায়নি" back showNav={false}>
+        <div className="p-8 text-center text-sm text-muted-foreground">কাঙ্ক্ষিত পার্টিটি পাওয়া যায়নি</div>
+      </Screen>
+    )
+  }
 
   const ledger = transactions.filter((t) => t?.partyId === id)
   const balance = party.balance ?? 0
