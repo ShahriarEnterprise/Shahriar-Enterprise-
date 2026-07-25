@@ -1,16 +1,16 @@
 {
-  "name": "shahriar-enterprise",
-  "short_name": "shahriar-enterprise",
-  "description": "পাইকারি ও ডিলারশিপ ব্যবসার সম্পূর্ণ হিসাব — স্টক, পার্টি খাতা, বিক্রি-কেনা, খরচ ও লাভ-ক্ষতির রিপোর্ট এক অ্যাপেই।",
+  "name": "Shahriar Enterprise",
+  "short_name": "Shahriar Enterprise",
+  "description": "Govt. Enlisted ABC Contractor Builders, Suppliers",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1A7A5E",
+  "background_color": "#0A0A0A",
+  "theme_color": "#D4AF37",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
