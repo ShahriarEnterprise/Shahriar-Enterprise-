@@ -3,33 +3,26 @@
 import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { Phone } from 'lucide-react'
-import { MessageSquare } from 'lucide-react'
-import { HandCoins } from 'lucide-react'
-import { ArrowDownLeft } from 'lucide-react'
-import { ArrowUpRight } from 'lucide-react'
-import { ShoppingCart } from 'lucide-react'
-
+import { Phone, MessageSquare, HandCoins, ArrowDownLeft, ArrowUpRight, ShoppingCart } from 'lucide-react'
 import { Screen } from '@/components/screen'
 import { Button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
-import { DialogContent } from '@/components/ui/dialog'
-import { DialogFooter } from '@/components/ui/dialog'
-import { DialogHeader } from '@/components/ui/dialog'
-import { DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useStore } from '@/lib/store'
-import { bdt } from '@/lib/format'
-import { bnDate } from '@/lib/format'
-import { toBn } from '@/lib/format'
+import { bdt, bnDate, toBn } from '@/lib/format'
 
 export default function PartyDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }> | { id: string }
 }) {
-  const { id } = use(params)
+  const resolvedParams = params && typeof (params as any).then === 'function' 
+    ? use(params as Promise<{ id: string }>) 
+    : (params as { id: string })
+  
+  const id = resolvedParams?.id
+
   const router = useRouter()
   const store = useStore()
 
@@ -37,7 +30,7 @@ export default function PartyDetailPage({
   useEffect(() => {
     setMounted(true)
   }, [])
-  
+
   const parties = Array.isArray(store?.parties) ? store.parties : []
   const transactions = Array.isArray(store?.transactions) ? store.transactions : []
   const collectDue = store?.collectDue
@@ -45,7 +38,6 @@ export default function PartyDetailPage({
   const [collectOpen, setCollectOpen] = useState(false)
   const [amount, setAmount] = useState('')
 
-  // Show loading while store hydrates
   if (!mounted) {
     return (
       <Screen title="লোড হচ্ছে..." back showNav={false}>
@@ -74,14 +66,38 @@ export default function PartyDetailPage({
 
   function handleCollect() {
     const val = Number(amount)
-    if (val > 0 && collectDue) {
-      collectDue(party!.id, val)
+    if (val > 0 && collectDue && party?.id) {
+      collectDue(party.id, val)
     }
     setAmount('')
     setCollectOpen(false)
   }
 
-  const reminderText = `প্রিয় ${party.name ?? ''}, আমাদের কাছে আপনার ${bdt(
+  const safeBdt = (val: any) => {
+    try {
+      return bdt(val ?? 0)
+    } catch {
+      return `${val ?? 0} টাকা`
+    }
+  }
+
+  const safeBnDate = (val: any) => {
+    try {
+      return bnDate(val)
+    } catch {
+      return String(val ?? '')
+    }
+  }
+
+  const safeToBn = (val: any) => {
+    try {
+      return toBn(val ?? 0)
+    } catch {
+      return String(val ?? 0)
+    }
+  }
+
+  const reminderText = `প্রিয় ${party.name ?? ''}, আমাদের কাছে আপনার ${safeBdt(
     Math.abs(balance),
   )} টাকা বাকি রয়েছে। অনুগ্রহ করে পরিশোধ করুন। — Shahriar Enterprise`
 
@@ -98,13 +114,13 @@ export default function PartyDetailPage({
               settled ? 'text-foreground' : owes ? 'text-primary' : 'text-destructive'
             }`}
           >
-            {bdt(Math.abs(balance))}
+            {safeBdt(Math.abs(balance))}
           </p>
           
           <div className="mt-3 flex justify-around border-t border-border pt-3 text-xs text-muted-foreground">
             <div>
               <span>মোট মাল নেওয়া: </span>
-              <span className="font-semibold text-foreground">{bdt(totalSaleAmount)}</span>
+              <span className="font-semibold text-foreground">{safeBdt(totalSaleAmount)}</span>
             </div>
             {party.address && (
               <div>
@@ -181,22 +197,22 @@ export default function PartyDetailPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-card-foreground">
-                        {t.type ?? 'লেনদেন'} · {toBn(txnItems.length)} আইটেম
+                        {t.type ?? 'লেনদেন'} · {safeToBn(txnItems.length)} আইটেম
                       </p>
-                      <p className="text-xs text-muted-foreground">{bnDate(t.date)}</p>
+                      <p className="text-xs text-muted-foreground">{safeBnDate(t.date)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-card-foreground">
-                        {bdt(t.total ?? 0)}
+                        {safeBdt(t.total ?? 0)}
                       </p>
                       {(t.due ?? 0) > 0 && (
-                        <p className="text-[11px] text-destructive">বাকি {bdt(t.due)}</p>
+                        <p className="text-[11px] text-destructive">বাকি {safeBdt(t.due)}</p>
                       )}
                     </div>
                   </div>
                   {txnItems.length > 0 && (
                     <p className="mt-2 truncate border-t border-border pt-2 text-xs text-muted-foreground">
-                      {txnItems.map((i) => `${i?.name ?? ''} (${toBn(i?.qty ?? 0)})`).join(', ')}
+                      {txnItems.map((i) => `${i?.name ?? ''} (${safeToBn(i?.qty ?? 0)})`).join(', ')}
                     </p>
                   )}
                 </li>
