@@ -111,6 +111,7 @@ export default function PartyDetailPage({
           <ul className="space-y-2.5">
             {ledger.map((t) => {
               const sale = t.type === 'বিক্রি'
+              const txnItems = Array.isArray(t.items) ? t.items : []
               return (
                 <li key={t.id} className="rounded-2xl bg-card p-3.5 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -127,7 +128,7 @@ export default function PartyDetailPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-card-foreground">
-                        {t.type} · {toBn(t.items.length)} আইটেম
+                        {t.type} · {toBn(txnItems.length)} আইটেম
                       </p>
                       <p className="text-xs text-muted-foreground">{bnDate(t.date)}</p>
                     </div>
@@ -140,9 +141,9 @@ export default function PartyDetailPage({
                       )}
                     </div>
                   </div>
-                  {t.items.length > 0 && (
+                  {txnItems.length > 0 && (
                     <p className="mt-2 truncate border-t border-border pt-2 text-xs text-muted-foreground">
-                      {t.items.map((i) => `${i.name} (${toBn(i.qty)})`).join(', ')}
+                      {txnItems.map((i) => `${i.name} (${toBn(i.qty)})`).join(', ')}
                     </p>
                   )}
                 </li>
