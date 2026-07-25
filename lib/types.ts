@@ -1,78 +1,79 @@
-export type Unit = 'পিস' | 'ডজন' | 'কেস' | 'কেজি' | 'বস্তা'
+export type Unit = 'পিস' | 'ডজন' | 'কেস' | 'বস্তা' | 'কেজি';
 
-export type PartyType = 'কাস্টমার' | 'সাপ্লায়ার' | 'SR/DSR'
+export type PartyType = 'supplier' | 'customer' | 'sr' | 'dsr';
 
-export type TxnType = 'বিক্রি' | 'কেনা'
+export type TxnType = 'sale' | 'purchase' | 'damage' | 'return' | 'adjustment';
 
 export interface Product {
-  id: string
-  name: string
-  category: string
-  unit: Unit
-  buyPrice: number
-  sellPrice: number
-  stock: number
-  lowStockAlert: number
-  createdAt: string
+  id: string;
+  user_id: string;
+  name: string;
+  sku?: string;
+  category: string;
+  unit: Unit;
+  purchase_price: number;
+  selling_price: number;
+  current_stock: number;
+  min_stock_level: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Party {
-  id: string
-  name: string
-  phone: string
-  type: PartyType
-  address?: string
-  /** positive = party owes you (বাকি/receivable), negative = you owe party */
-  balance: number
-  createdAt: string
+  id: string;
+  user_id: string;
+  name: string;
+  type: PartyType;
+  phone: string;
+  email?: string;
+  address: string;
+  city?: string;
+  balance: number; // বকেয়া বা ব্যালেন্স
+  created_at: string;
+  updated_at: string;
 }
 
-export interface SaleItem {
-  productId: string
-  name: string
-  unit: Unit
-  qty: number
-  price: number
+export interface TransactionItem {
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
 }
 
 export interface Transaction {
-  id: string
-  type: TxnType
-  partyId: string
-  partyName: string
-  items: SaleItem[]
-  total: number
-  paid: number
-  due: number
-  date: string
-  note?: string
+  id: string;
+  user_id: string;
+  party_id: string;
+  type: TxnType;
+  products: TransactionItem[];
+  total_amount: number;
+  paid_amount: number;
+  notes?: string;
+  payment_status: 'pending' | 'partial' | 'completed';
+  transaction_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LedgerEntry {
+  id: string;
+  user_id: string;
+  party_id: string;
+  transaction_id?: string;
+  type: 'debit' | 'credit';
+  amount: number;
+  balance: number;
+  description: string;
+  entry_date: string;
+  created_at: string;
 }
 
 export interface Expense {
-  id: string
-  category: string
-  amount: number
-  date: string
-  note?: string
-}
-
-export interface Chalan {
-  id: string
-  srId: string
-  srName: string
-  items: SaleItem[]
-  total: number
-  returned: number
-  collected: number
-  status: 'পেন্ডিং' | 'সম্পন্ন'
-  date: string
-}
-
-export interface Employee {
-  id: string
-  name: string
-  phone: string
-  role: 'মালিক' | 'পার্টনার' | 'ম্যানেজার' | 'কর্মচারী' | 'স্টাফ' | 'ডেলিভারি'
-  permissions?: string[]
-  active: boolean
+  id: string;
+  user_id: string;
+  category: string;
+  amount: number;
+  description: string;
+  expense_date: string;
+  created_at: string;
 }
