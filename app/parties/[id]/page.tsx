@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { Phone, MessageSquare, HandCoins, ArrowDownLeft, ArrowUpRight, ShoppingCart, Gift, Award } from 'lucide-react'
+import { Phone, MessageSquare, HandCoins, ArrowDownLeft, ArrowUpRight, ShoppingCart, Gift, Plus, Minus, Search, AlertCircle } from 'lucide-react'
 import { Screen } from '@/components/screen'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -33,17 +33,25 @@ export default function PartyDetailPage({
 
   const parties = Array.isArray(store?.parties) ? store.parties : []
   const transactions = Array.isArray(store?.transactions) ? store.transactions : []
+  const products = Array.isArray(store?.products) ? store.products : [
+    { id: 'p1', name: 'চিনি (প্রতি বস্তা)', stock: 15, price: 3200 },
+    { id: 'p2', name: 'নাজিরশাইল চাল (৫০ কেজি)', stock: 8, price: 3400 },
+    { id: 'p3', name: 'চিনির প্যাকেট (১ কেজি)', stock: 0, price: 135 },
+    { id: 'p4', name: 'সয়াবিন তেল (৫ লিটার)', stock: 25, price: 850 },
+  ] // Fallback mock products if store.products isn't defined yet
+
   const collectDue = store?.collectDue
   const addTransaction = store?.addTransaction
+  const updateStock = store?.updateStock
 
   const [collectOpen, setCollectOpen] = useState(false)
   const [amount, setAmount] = useState('')
 
-  // New Order Modal state
+  // New Order / Inventory Modal State
   const [orderOpen, setOrderOpen] = useState(false)
-  const [itemName, setItemName] = useState('')
-  const [itemQty, setItemQty] = useState('1')
-  const [itemTotal, setItemTotal] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [qty, setQty] = useState(1)
   const [itemDue, setItemDue] = useState('')
 
   if (!mounted) {
@@ -99,34 +107,47 @@ export default function PartyDetailPage({
     setCollectOpen(false)
   }
 
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const isStockOut = !selectedProduct || selectedProduct.stock <= 0 || qty > selectedProduct.stock
+  const calculatedTotal = selectedProduct ? selectedProduct.price * qty : 0
+
   function handleCreateOrder(e: React.FormEvent) {
     e.preventDefault()
-    const totalVal = Number(itemTotal) || 0
+    if (!selectedProduct) return
+    if (qty <= 0) return
+
     const dueVal = Number(itemDue) || 0
-    const qtyVal = Number(itemQty) || 1
 
-    if (totalVal > 0) {
-      const newTxn = {
-        id: 'txn_' + Date.now(),
-        partyId: party.id,
-        type: 'বিক্রি',
-        date: new Date().toISOString().split('T')[0],
-        total: totalVal,
-        due: dueVal,
-        items: [{ name: itemName || 'সাধারণ পণ্য', qty: qtyVal, price: totalVal / qtyVal }]
-      }
-
-      if (addTransaction) {
-        addTransaction(newTxn)
-      } else {
-        // Fallback if store method name differs
-        transactions.unshift(newTxn)
-      }
+    const newTxn = {
+      id: 'txn_' + Date.now(),
+      partyId: party.id,
+      type: 'বিক্রি',
+      date: new Date().toISOString().split('T')[0],
+      total: calculatedTotal,
+      due: dueVal,
+      items: [{ name: selectedProduct.name, qty: qty, price: selectedProduct.price }]
     }
 
-    setItemName('')
-    setItemQty('1')
-    setItemTotal('')
+    if (addTransaction) {
+      addTransaction(newTxn)
+    } else {
+      transactions.unshift(newTxn)
+    }
+
+    // Deduct stock automatically
+    if (updateStock) {
+      updateStock(selectedProduct.id, qty)
+    } else if (selectedProduct.stock !== undefined) {
+      selectedProduct.stock -= qty
+    }
+
+    // Reset Form
+    setSelectedProduct(null)
+    setSearchTerm('')
+    setQty(1)
     setItemDue('')
     setOrderOpen(false)
   }
@@ -306,56 +327,145 @@ export default function PartyDetailPage({
         </DialogContent>
       </Dialog>
 
-      {/* New Order Modal */}
+      {/* Smart Inventory New Order Modal */}
       <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-        <DialogContent className="max-w-xs">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>নতুন অর্ডার / বিক্রি</DialogTitle>
+            <DialogTitle>নতুন অর্ডার ও স্টক চেক</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateOrder} className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="item-name">পণ্যের নাম</Label>
-              <Input
-                id="item-name"
-                value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
-                placeholder="যেমন: সয়াবিন তেল / চাল"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="item-qty">পরিমাণ</Label>
-              <Input
-                id="item-qty"
-                type="number"
-                value={itemQty}
-                onChange={(e) => setItemQty(e.target.value)}
-                placeholder="১"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="item-total">মোট মূল্য (টাকা)</Label>
-              <Input
-                id="item-total"
-                inputMode="numeric"
-                value={itemTotal}
-                onChange={(e) => setItemTotal(e.target.value)}
-                placeholder="০"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="item-due">বাকি টাকা (যদি থাকে)</Label>
-              <Input
-                id="item-due"
-                inputMode="numeric"
-                value={itemDue}
-                onChange={(e) => setItemDue(e.target.value)}
-                placeholder="০"
-              />
-            </div>
+            {!selectedProduct ? (
+              <div className="space-y-2">
+                <Label>পণ্য খুঁজুন (যেমন: চিনি, চাল)</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="নাম লিখে খুঁজুন..."
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 mt-2 border border-border rounded-xl p-1.5 bg-muted/30">
+                  {filteredProducts.map((p) => {
+                    const outOfStock = p.stock <= 0
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedProduct(p)
+                          setQty(1)
+                        }}
+                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
+                          outOfStock ? 'bg-destructive/10 opacity-70' : 'bg-card hover:bg-secondary/50'
+                        }`}
+                      >
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">{p.name}</p>
+                          <p className="text-[11px] text-muted-foreground">মূল্য: {safeBdt(p.price)}</p>
+                        </div>
+                        <div className="text-right">
+                          {outOfStock ? (
+                            <span className="text-[11px] font-bold text-destructive">০ স্টক</span>
+                          ) : (
+                            <span className="text-[11px] font-medium text-primary">স্টক: {toBn(p.stock)} টি</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {filteredProducts.length === 0 && (
+                    <p className="p-4 text-center text-xs text-muted-foreground">কোনো পণ্য পাওয়া যায়নি</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-secondary/50 p-2.5 rounded-xl border border-border">
+                  <div>
+                    <p className="text-xs text-muted-foreground">নির্বাচিত পণ্য</p>
+                    <p className="text-sm font-bold text-foreground">{selectedProduct.name}</p>
+                    <p className="text-xs text-primary font-semibold mt-0.5">দর: {safeBdt(selectedProduct.price)}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 px-2 text-destructive"
+                    onClick={() => setSelectedProduct(null)}
+                  >
+                    পরিবর্তন
+                  </Button>
+                </div>
+
+                {/* Quantity Counter with +/- */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <Label>পরিমাণ / পিস</Label>
+                    <span className={`font-medium ${selectedProduct.stock === 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                      মজুদ আছে: {toBn(selectedProduct.stock)} টি
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setQty(Math.max(1, qty - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      className="text-center font-bold"
+                      value={qty}
+                      onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setQty(qty + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {qty > selectedProduct.stock && (
+                    <p className="text-[11px] text-destructive flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" /> স্টকে পর্যাপ্ত পণ্য নেই (০ স্টক / অপর্যাপ্ত)
+                    </p>
+                  )}
+                </div>
+
+                {/* Auto Price Display */}
+                <div className="rounded-xl bg-card p-3 border border-border flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">মোট প্রাক-মূল্য:</span>
+                  <span className="text-base font-bold text-primary">{safeBdt(calculatedTotal)}</span>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="item-due">বাকি টাকা (যদি থাকে)</Label>
+                  <Input
+                    id="item-due"
+                    inputMode="numeric"
+                    value={itemDue}
+                    onChange={(e) => setItemDue(e.target.value)}
+                    placeholder="০"
+                  />
+                </div>
+              </div>
+            )}
+
             <DialogFooter className="pt-2">
-              <Button type="submit" className="w-full">
-                অর্ডার নিশ্চিত করুন
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isStockOut}
+              >
+                {isStockOut ? 'স্টক আউট / অপর্যাপ্ত পরিমাণ' : 'অর্ডার নিশ্চিত করুন ও মেমো তৈরি করুন'}
               </Button>
             </DialogFooter>
           </form>
