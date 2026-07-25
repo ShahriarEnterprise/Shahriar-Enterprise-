@@ -52,8 +52,8 @@ export interface Expense {
   id: string
   category: string
   amount: number
-  note?: string
   date: string
+  note?: string
 }
 
 export interface Chalan {
@@ -72,7 +72,7 @@ export interface Employee {
   id: string
   name: string
   phone: string
-  role: 'পার্টনার' | 'ম্যানেজার' | 'কর্মচারী'
-  permissions: string[]
+  role: 'মালিক' | 'পার্টনার' | 'ম্যানেজার' | 'কর্মচারী' | 'স্টাফ' | 'ডেলিভারি'
+  permissions?: string[]
   active: boolean
 }
