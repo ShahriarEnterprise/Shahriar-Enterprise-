@@ -19,71 +19,64 @@ import type {
   TxnType,
 } from './types'
 
-const uid = () => Math.random().toString(36).slice(2, 10)
+const uid = () => Math.random().toString(36).substring(2, 9)
 const today = new Date()
 const iso = (d: Date) => d.toISOString()
-const daysAgo = (n: number) => iso(new Date(today.getTime() - n * 86400000))
 
 const seedProducts: Product[] = [
-  { id: 'p1', name: 'তীর সয়াবিন তেল ৫ লিটার', category: 'ভোজ্য তেল', unit: 'কেস', buyPrice: 820, sellPrice: 865, stock: 46, lowStockAlert: 10, createdAt: daysAgo(40) },
-  { id: 'p2', name: 'ফ্রেশ চিনি ১ কেজি', category: 'মুদি', unit: 'বস্তা', buyPrice: 118, sellPrice: 128, stock: 8, lowStockAlert: 15, createdAt: daysAgo(38) },
-  { id: 'p3', name: 'রূপচাঁদা সরিষার তেল ১ লিটার', category: 'ভোজ্য তেল', unit: 'ডজন', buyPrice: 195, sellPrice: 215, stock: 120, lowStockAlert: 24, createdAt: daysAgo(30) },
-  { id: 'p4', name: 'প্রাণ চানাচুর ৩০০ গ্রাম', category: 'স্ন্যাকস', unit: 'কেস', buyPrice: 45, sellPrice: 55, stock: 210, lowStockAlert: 30, createdAt: daysAgo(25) },
-  { id: 'p5', name: 'ইস্পাহানি চা ৪০০ গ্রাম', category: 'পানীয়', unit: 'পিস', buyPrice: 210, sellPrice: 240, stock: 64, lowStockAlert: 20, createdAt: daysAgo(20) },
-  { id: 'p6', name: 'ড্যানো গুঁড়া দুধ ৫০০ গ্রাম', category: 'ডেইরি', unit: 'পিস', buyPrice: 375, sellPrice: 410, stock: 5, lowStockAlert: 12, createdAt: daysAgo(15) },
-  { id: 'p7', name: 'কোকাকোলা ২৫০ মিলি', category: 'পানীয়', unit: 'কেস', buyPrice: 240, sellPrice: 280, stock: 88, lowStockAlert: 15, createdAt: daysAgo(10) },
-  { id: 'p8', name: 'ফ্রেশ আটা ২ কেজি', category: 'মুদি', unit: 'বস্তা', buyPrice: 105, sellPrice: 118, stock: 32, lowStockAlert: 10, createdAt: daysAgo(6) },
+  { id: 'p1', name: 'তীর সয়াবিন তেল ৫ লিটার', category: 'ভোজ্য তেল', buyingPrice: 820, price: 865, stock: 46, unit: 'কেস' },
+  { id: 'p2', name: 'ফ্রেশ চিনি ১ কেজি', category: 'মুদি', buyingPrice: 130, price: 140, stock: 8, unit: 'বস্তা' },
+  { id: 'p3', name: 'রূপচাঁদা সরিষার তেল ১ লিটার', category: 'ভোজ্য তেল', buyingPrice: 180, price: 195, stock: 114, unit: 'ডজন' },
+  { id: 'p4', name: 'প্রাণ চানাচুর ৩০০ গ্রাম', category: 'স্ন্যাক্স', buyingPrice: 50, price: 60, stock: 210, unit: 'কেস' },
+  { id: 'p5', name: 'ইস্পাহানি চা ৪০০ গ্রাম', category: 'পানীয়', buyingPrice: 220, price: 240, stock: 62, unit: 'পিস' },
+  { id: 'p6', name: 'ডানো গুঁড়া দুধ ৫০০ গ্রাম', category: 'মুদি', buyingPrice: 450, price: 480, stock: 30, unit: 'পিস' },
+  { id: 'p7', name: 'কোসাকোলা ২৫০ মিলি', category: 'পানীয়', buyingPrice: 20, price: 25, stock: 100, unit: 'পিস' },
+  { id: 'p8', name: 'ফ্রেশ আটা ২ কেজি', category: 'মুদি', buyingPrice: 110, price: 125, stock: 50, unit: 'বস্তা' },
 ]
 
 const seedParties: Party[] = [
-  { id: 'c1', name: 'আল-আমিন স্টোর', phone: '01711223344', type: 'কাস্টমার', address: 'নিউমার্কেট, ঢাকা', balance: 12500, createdAt: daysAgo(50) },
-  { id: 'c2', name: 'ভাই ভাই এন্টারপ্রাইজ', phone: '01822334455', type: 'কাস্টমার', address: 'মিরপুর ১০', balance: 8200, createdAt: daysAgo(45) },
-  { id: 'c3', name: 'মায়ের দোয়া জেনারেল স্টোর', phone: '01933445566', type: 'কাস্টমার', address: 'সাভার', balance: 0, createdAt: daysAgo(40) },
-  { id: 's1', name: 'সিটি গ্রুপ ডিস্ট্রিবিউশন', phone: '01611112233', type: 'সাপ্লায়ার', address: 'তেজগাঁও', balance: -45000, createdAt: daysAgo(60) },
-  { id: 's2', name: 'প্রাণ-আরএফএল সাপ্লাই', phone: '01599887766', type: 'সাপ্লায়ার', address: 'নারায়ণগঞ্জ', balance: -18000, createdAt: daysAgo(55) },
-  { id: 'sr1', name: 'করিম (SR - উত্তর জোন)', phone: '01744556677', type: 'SR/DSR', address: 'উত্তরা', balance: 6500, createdAt: daysAgo(35) },
-  { id: 'sr2', name: 'রফিক (DSR - দক্ষিণ জোন)', phone: '01855667788', type: 'SR/DSR', address: 'যাত্রাবাড়ী', balance: 3200, createdAt: daysAgo(30) },
+  { id: 'c1', name: 'আল-আমীন স্টোর', type: 'কাস্টমার', phone: '01711223344', address: 'নিউমারকেট, ঢাকা', balance: 612500 },
+  { id: 'c2', name: 'ভাই ভাই এন্টারপ্রাইজ', type: 'কাস্টমার', phone: '01811223344', address: 'চকবাজার, চট্টগ্রাম', balance: 0 },
+  { id: 'c3', name: 'মায়ের দোয়া জেনারেল স্টোর', type: 'কাস্টমার', phone: '01911223344', address: 'খুলনা সদর', balance: 15000 },
+  { id: 's1', name: 'সিটি গ্রুপ ডিস্ট্রিবিউশন', type: 'সাপ্লায়ার', phone: '01611223344', address: 'তেজগাঁও, ঢাকা', balance: 0 },
+  { id: 's2', name: 'প্রাণ-আরএফএল সাপ্লাই', type: 'সাপ্লায়ার', phone: '01511223344', address: 'বাড্ডা, ঢাকা', balance: 0 },
+  { id: 'sr1', name: 'করিম (SR - উত্তর জোন)', type: 'এসআর', phone: '01700000001' },
+  { id: 'sr2', name: 'রফিক (DSR - দক্ষিণ জোন)', type: 'এসআর', phone: '01700000002' },
 ]
 
 const seedTransactions: Transaction[] = [
-  { id: 't1', type: 'বিক্রি', partyId: 'c1', partyName: 'আল-আমিন স্টোর', items: [{ productId: 'p1', name: 'তীর সয়াবিন তেল ৫ লিটার', unit: 'কেস', qty: 5, price: 865 }], total: 4325, paid: 2000, due: 2325, date: daysAgo(0), note: 'নগদ আংশিক' },
-  { id: 't2', type: 'বিক্রি', partyId: 'c2', partyName: 'ভাই ভাই এন্টারপ্রাইজ', items: [{ productId: 'p4', name: 'প্রাণ চানাচুর ৩০০ গ্রাম', unit: 'কেস', qty: 10, price: 55 }, { productId: 'p7', name: 'কোকাকোলা ২৫০ মিলি', unit: 'কেস', qty: 4, price: 280 }], total: 1670, paid: 1670, due: 0, date: daysAgo(0) },
-  { id: 't3', type: 'কেনা', partyId: 's1', partyName: 'সিটি গ্রুপ ডিস্ট্রিবিউশন', items: [{ productId: 'p1', name: 'তীর সয়াবিন তেল ৫ লিটার', unit: 'কেস', qty: 20, price: 820 }], total: 16400, paid: 10000, due: 6400, date: daysAgo(1) },
-  { id: 't4', type: 'বিক্রি', partyId: 'c1', partyName: 'আল-আমিন স্টোর', items: [{ productId: 'p3', name: 'রূপচাঁদা সরিষার তেল ১ লিটার', unit: 'ডজন', qty: 6, price: 215 }], total: 1290, paid: 0, due: 1290, date: daysAgo(2) },
-  { id: 't5', type: 'বিক্রি', partyId: 'c3', partyName: 'মায়ের দোয়া জেনারেল স্টোর', items: [{ productId: 'p5', name: 'ইস্পাহানি চা ৪০০ গ্রাম', unit: 'পিস', qty: 12, price: 240 }], total: 2880, paid: 2880, due: 0, date: daysAgo(3) },
-  { id: 't6', type: 'কেনা', partyId: 's2', partyName: 'প্রাণ-আরএফএল সাপ্লাই', items: [{ productId: 'p4', name: 'প্রাণ চানাচুর ৩০০ গ্রাম', unit: 'কেস', qty: 50, price: 45 }], total: 2250, paid: 2250, due: 0, date: daysAgo(4) },
+  { id: 't1', type: 'বিক্রি', partyId: 'c1', partyName: 'আল-আমীন স্টোর', items: [{ name: 'রূপচাঁদা সরিষার তেল ১ লিটার', qty: 6, price: 195 }], total: 1170, paid: 1000, due: 170, date: iso(today) },
 ]
 
 const seedExpenses: Expense[] = [
-  { id: 'e1', category: 'পরিবহন', amount: 1200, note: 'ডেলিভারি ভাড়া', date: daysAgo(0) },
-  { id: 'e2', category: 'দোকান ভাড়া', amount: 15000, note: 'মাসিক ভাড়া', date: daysAgo(1) },
-  { id: 'e3', category: 'বিদ্যুৎ বিল', amount: 2400, date: daysAgo(2) },
-  { id: 'e4', category: 'কর্মচারী বেতন', amount: 18000, note: '২ জন', date: daysAgo(3) },
-  { id: 'e5', category: 'চা-নাস্তা', amount: 450, date: daysAgo(0) },
+  { id: 'e1', category: 'পরিবহন', amount: 1500, date: iso(today), note: 'মাল আনা-বওয়া' },
+  { id: 'e2', category: 'দোকান ভাড়া', amount: 12000, date: iso(today) },
+  { id: 'e3', category: 'বিদ্যুৎ বিল', amount: 2500, date: iso(today) },
+  { id: 'e4', category: 'কর্মচারী বেতন', amount: 25000, date: iso(today) },
+  { id: 'e5', category: 'চা-নাস্তা', amount: 300, date: iso(today) },
 ]
 
 const seedChalans: Chalan[] = [
-  { id: 'ch1', srId: 'sr1', srName: 'করিম (SR - উত্তর জোন)', items: [{ productId: 'p4', name: 'প্রাণ চানাচুর ৩০০ গ্রাম', unit: 'কেস', qty: 30, price: 55 }, { productId: 'p7', name: 'কোকাকোলা ২৫০ মিলি', unit: 'কেস', qty: 15, price: 280 }], total: 5850, returned: 0, collected: 0, status: 'পেন্ডিং', date: daysAgo(0) },
-  { id: 'ch2', srId: 'sr2', srName: 'রফিক (DSR - দক্ষিণ জোন)', items: [{ productId: 'p5', name: 'ইস্পাহানি চা ৪০০ গ্রাম', unit: 'পিস', qty: 20, price: 240 }], total: 4800, returned: 800, collected: 3200, status: 'পেন্ডিং', date: daysAgo(1) },
+  { id: 'ch1', srId: 'sr1', srName: 'করিম', items: [], total: 0, returned: 0, collected: 0, status: 'পেন্ডিং', date: iso(today) }
 ]
 
 const seedEmployees: Employee[] = [
-  { id: 'em1', name: 'শাহরিয়ার (মালিক)', phone: '01700000000', role: 'পার্টনার', permissions: ['সব'], active: true },
-  { id: 'em2', name: 'জসিম উদ্দিন', phone: '01712345678', role: 'ম্যানেজার', permissions: ['বিক্রি', 'স্টক', 'পার্টি খাতা'], active: true },
-  { id: 'em3', name: 'সবুজ মিয়া', phone: '01898765432', role: 'কর্মচারী', permissions: ['বিক্রি'], active: false },
+  { id: 'em1', name: 'শাহরিয়ার (মালিক)', phone: '01711223344', role: 'মালিক', active: true },
+  { id: 'em2', name: 'জসিম উদ্দিন', phone: '01811223344', role: 'স্টাফ', active: true },
+  { id: 'em3', name: 'সবুজ মিয়া', phone: '01911223344', role: 'ডেলিভারি', active: true },
 ]
 
-interface StoreValue {
+export interface StoreValue {
   products: Product[]
   parties: Party[]
   transactions: Transaction[]
   expenses: Expense[]
   chalans: Chalan[]
   employees: Employee[]
-  addProduct: (p: Omit<Product, 'id' | 'createdAt'>) => void
+  addProduct: (p: Omit<Product, 'id'>) => void
   updateProduct: (id: string, p: Partial<Product>) => void
   deleteProduct: (id: string) => void
-  addParty: (p: Omit<Party, 'id' | 'createdAt' | 'balance'> & { balance?: number }) => void
+  addParty: (p: Omit<Party, 'id' | 'balance'> & { balance?: number }) => void
   addTransaction: (t: {
     type: TxnType
     partyId: string
@@ -109,35 +102,53 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [chalans, setChalans] = useState<Chalan[]>(seedChalans)
   const [employees, setEmployees] = useState<Employee[]>(seedEmployees)
 
-  const addProduct: StoreValue['addProduct'] = useCallback((p) => {
-    setProducts((prev) => [
-      { ...p, id: uid(), createdAt: iso(new Date()) },
-      ...prev,
-    ])
+  const addProduct = useCallback((p: Omit<Product, 'id'>) => {
+    const newProd: Product = {
+      id: 'prod_' + uid(),
+      ...p,
+      price: Number(p.price ?? (p as any).sellingPrice ?? 150),
+      stock: Number(p.stock ?? 10),
+    }
+    setProducts((prev) => [newProd, ...prev])
   }, [])
 
-  const updateProduct: StoreValue['updateProduct'] = useCallback((id, patch) => {
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)))
+  const updateProduct = useCallback((id: string, updated: Partial<Product>) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === id) {
+          const merged = { ...p, ...updated }
+          return {
+            ...merged,
+            price: Number(merged.price ?? (merged as any).sellingPrice ?? p.price ?? 150),
+            stock: Number(merged.stock ?? p.stock ?? 10),
+          }
+        }
+        return p
+      })
+    )
   }, [])
 
-  const deleteProduct: StoreValue['deleteProduct'] = useCallback((id) => {
+  const deleteProduct = useCallback((id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id))
   }, [])
 
-  const addParty: StoreValue['addParty'] = useCallback((p) => {
-    setParties((prev) => [
-      { ...p, balance: p.balance ?? 0, id: uid(), createdAt: iso(new Date()) },
-      ...prev,
-    ])
+  const addParty = useCallback((p: Omit<Party, 'id' | 'balance'> & { balance?: number }) => {
+    const newParty: Party = {
+      id: 'party_' + uid(),
+      ...p,
+      balance: Number(p.balance ?? 0),
+    }
+    setParties((prev) => [newParty, ...prev])
   }, [])
 
-  const addTransaction: StoreValue['addTransaction'] = useCallback(
-    ({ type, partyId, items, paid, note }) => {
-      const total = items.reduce((s, i) => s + i.qty * i.price, 0)
+  const addTransaction = useCallback(
+    ({ type, partyId, items, paid, note }: { type: TxnType; partyId: string; items: SaleItem[]; paid: number; note?: string }) => {
+      const total = items.reduce((s, i) => s + Number(i.price ?? 0) * Number(i.qty ?? 0), 0)
       const due = Math.max(0, total - paid)
       const party = parties.find((p) => p.id === partyId)
+
       const txn: Transaction = {
-        id: uid(),
+        id: 'txn_' + uid(),
         type,
         partyId,
         partyName: party?.name ?? 'অজানা',
@@ -148,107 +159,94 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         date: iso(new Date()),
         note,
       }
+
       setTransactions((prev) => [txn, ...prev])
 
-      // stock update
       setProducts((prev) =>
         prev.map((prod) => {
-          const line = items.find((i) => i.productId === prod.id)
+          const line = items.find((i) => i.name === prod.name)
           if (!line) return prod
-          return {
-            ...prod,
-            stock: type === 'বিক্রি' ? prod.stock - line.qty : prod.stock + line.qty,
-          }
-        }),
+          const qtyChange = Number(line.qty ?? 0)
+          const newStock = type === 'বিক্রি' 
+            ? Math.max(0, prod.stock - qtyChange) 
+            : prod.stock + qtyChange
+          return { ...prod, stock: newStock }
+        })
       )
 
-      // party balance update
       setParties((prev) =>
         prev.map((pt) => {
           if (pt.id !== partyId) return pt
-          // sale: customer owes due (balance +). purchase: you owe due (balance -)
-          const delta = type === 'বিক্রি' ? due : -due
+          const delta = type === 'বিক্রি' ? due : -paid
           return { ...pt, balance: pt.balance + delta }
-        }),
+        })
       )
     },
-    [parties],
+    [parties]
   )
 
-  const collectDue: StoreValue['collectDue'] = useCallback((partyId, amount) => {
+  const collectDue = useCallback((partyId: string, amount: number) => {
     setParties((prev) =>
       prev.map((pt) => {
         if (pt.id !== partyId) return pt
-        const dir = pt.balance >= 0 ? -1 : 1
-        return { ...pt, balance: pt.balance + dir * amount }
-      }),
-    )
-  }, [])
-
-  const addExpense: StoreValue['addExpense'] = useCallback((e) => {
-    setExpenses((prev) => [
-      { ...e, id: uid(), date: e.date ?? iso(new Date()) },
-      ...prev,
-    ])
-  }, [])
-
-  const addEmployee: StoreValue['addEmployee'] = useCallback((e) => {
-    setEmployees((prev) => [{ ...e, id: uid() }, ...prev])
-  }, [])
-
-  const toggleEmployee: StoreValue['toggleEmployee'] = useCallback((id) => {
-    setEmployees((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, active: !e.active } : e)),
-    )
-  }, [])
-
-  const addChalan: StoreValue['addChalan'] = useCallback(
-    ({ srId, items }) => {
-      const total = items.reduce((s, i) => s + i.qty * i.price, 0)
-      const sr = parties.find((p) => p.id === srId)
-      const chalan: Chalan = {
-        id: uid(),
-        srId,
-        srName: sr?.name ?? 'অজানা',
-        items,
-        total,
-        returned: 0,
-        collected: 0,
-        status: 'পেন্ডিং',
-        date: iso(new Date()),
-      }
-      setChalans((prev) => [chalan, ...prev])
-      // reduce stock for handed-over goods
-      setProducts((prev) =>
-        prev.map((prod) => {
-          const line = items.find((i) => i.productId === prod.id)
-          return line ? { ...prod, stock: prod.stock - line.qty } : prod
-        }),
-      )
-    },
-    [parties],
-  )
-
-  const settleChalan: StoreValue['settleChalan'] = useCallback(
-    (id, returned, collected) => {
-      setChalans((prev) =>
-        prev.map((c) =>
-          c.id === id
-            ? { ...c, returned, collected, status: 'সম্পন্ন' as const }
-            : c,
-        ),
-      )
-      // returned goods come back to stock (proportional not tracked; add back count)
-      setChalans((prev) => {
-        const c = prev.find((x) => x.id === id)
-        if (c && returned > 0) {
-          // add back returned value's worth is approximate; skip stock detail for demo
-        }
-        return prev
+        return { ...pt, balance: Math.max(0, pt.balance - amount) }
       })
-    },
-    [],
-  )
+    )
+  }, [])
+
+  const addExpense = useCallback((e: Omit<Expense, 'id' | 'date'> & { date?: string }) => {
+    const newExp: Expense = {
+      id: 'exp_' + uid(),
+      ...e,
+      date: e.date ?? iso(new Date()),
+    }
+    setExpenses((prev) => [newExp, ...prev])
+  }, [])
+
+  const addEmployee = useCallback((e: Omit<Employee, 'id'>) => {
+    const newEmp: Employee = {
+      id: 'emp_' + uid(),
+      ...e,
+    }
+    setEmployees((prev) => [newEmp, ...prev])
+  }, [])
+
+  const toggleEmployee = useCallback((id: string) => {
+    setEmployees((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, active: !e.active } : e))
+    )
+  }, [])
+
+  const addChalan = useCallback(({ srId, items }: { srId: string; items: SaleItem[] }) => {
+    const total = items.reduce((s, i) => s + Number(i.price ?? 0) * Number(i.qty ?? 0), 0)
+    const sr = parties.find((p) => p.id === srId)
+    const chalan: Chalan = {
+      id: 'ch_' + uid(),
+      srId,
+      srName: sr?.name ?? 'অজানা',
+      items,
+      total,
+      returned: 0,
+      collected: 0,
+      status: 'পেন্ডিং',
+      date: iso(new Date()),
+    }
+    setChalans((prev) => [chalan, ...prev])
+
+    setProducts((prev) =>
+      prev.map((prod) => {
+        const line = items.find((i) => i.name === prod.name)
+        if (!line) return prod
+        return { ...prod, stock: Math.max(0, prod.stock - Number(line.qty ?? 0)) }
+      })
+    )
+  }, [parties])
+
+  const settleChalan = useCallback((id: string, returned: number, collected: number) => {
+    setChalans((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, returned, collected, status: 'সম্পন্ন' } : c))
+    )
+  }, [])
 
   const value = useMemo<StoreValue>(
     () => ({
@@ -288,7 +286,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleEmployee,
       addChalan,
       settleChalan,
-    ],
+    ]
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
@@ -296,6 +294,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
 export function useStore() {
   const ctx = useContext(StoreContext)
-  if (!ctx) throw new Error('useStore must be used within StoreProvider')
+  if (!ctx) throw new Error('useStore must be used within a StoreProvider')
   return ctx
 }
