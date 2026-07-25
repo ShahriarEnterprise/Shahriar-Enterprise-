@@ -1,14 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Package, SlidersHorizontal, Trash2, Edit } from 'lucide-react'
+import { Search, Package, SlidersHorizontal, Trash2, Edit, X } from 'lucide-react'
 import { Screen } from '@/components/screen'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { AddProductDialog } from '@/components/products/add-product-dialog'
 import { StockAdjustDialog } from '@/components/products/stock-adjust-dialog'
 import { useStore } from '@/lib/store'
-import { supabase } from '@/lib/supabase' // সুপাবেস ক্লায়েন্ট ইমপোর্ট করা হলো
+import { supabase } from '@/lib/supabase'
 import { bdt, toBn } from '@/lib/format'
 import type { Product } from '@/lib/types'
 
@@ -16,6 +16,7 @@ export default function ProductsPage() {
   const { products } = useStore()
   const [query, setQuery] = useState('')
   const [adjust, setAdjust] = useState<Product | null>(null)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
   const filtered = useMemo(
     () =>
@@ -32,7 +33,7 @@ export default function ProductsPage() {
 
   // প্রোডাক্ট ডিলিট করার ফাংশন
   const handleDelete = async (productId: string, e: React.MouseEvent) => {
-    e.stopPropagation() // যাতে কার্ডের অন্য ক্লিক ইভেন্ট কাজ না করে
+    e.stopPropagation()
     if (confirm("আপনি কি নিশ্চিতভাবে এই প্রোডাক্টটি ডিলিট করতে চান?")) {
       const { error } = await supabase
         .from('products')
@@ -40,11 +41,37 @@ export default function ProductsPage() {
         .eq('id', productId)
 
       if (error) {
-        alert("ডিলিট করতে সমস্যা হয়েছে: " + error.message)
+        alert("ডিলিট করা যায়নি! কারণ: " + error.message)
       } else {
         alert("প্রোডাক্ট সফলভাবে ডিলিট হয়েছে!")
         window.location.reload()
       }
+    }
+  }
+
+  // প্রোডাক্ট এডিট বা আপডেট করার ফাংশন
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProduct) return
+
+    const { error } = await supabase
+      .from('products')
+      .update({
+        name: editingProduct.name,
+        category: editingProduct.category,
+        buy_price: editingProduct.buyPrice,
+        sell_price: editingProduct.sellPrice,
+        stock: editingProduct.stock,
+        unit: editingProduct.unit,
+      })
+      .eq('id', editingProduct.id)
+
+    if (error) {
+      alert("এডিট করতে সমস্যা হয়েছে: " + error.message)
+    } else {
+      alert("প্রোডাক্ট সফলভাবে আপডেট করা হয়েছে!")
+      setEditingProduct(null)
+      window.location.reload()
     }
   }
 
@@ -98,7 +125,20 @@ export default function ProductsPage() {
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {/* এডিট বাটন */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingProduct(p)
+                      }}
+                      className="p-2 text-muted-foreground hover:text-primary transition-colors"
+                      title="এডিট করুন"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+
                     {/* ডিলিট বাটন */}
                     <button
                       type="button"
@@ -109,7 +149,7 @@ export default function ProductsPage() {
                       <Trash2 className="h-4 w-4" />
                     </button>
 
-                    <div className="text-right">
+                    <div className="text-right ml-1">
                       <div className="flex items-center justify-end gap-1">
                         <SlidersHorizontal className="h-3 w-3 text-muted-foreground" />
                         <span
@@ -144,6 +184,100 @@ export default function ProductsPage() {
       </div>
 
       <StockAdjustDialog product={adjust} onOpenChange={(o) => !o && setAdjust(null)} />
+
+      {/* এডিট প্রোডাক্ট মডাল ফর্ম */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-card-foreground">প্রোডাক্ট এডিট করুন</h3>
+              <button 
+                onClick={() => setEditingProduct(null)}
+                className="p-1 text-muted-foreground hover:text-card-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProduct} className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">পণ্যের নাম</label>
+                <Input
+                  value={editingProduct.name}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground">ক্যাটাগরি</label>
+                <Input
+                  value={editingProduct.category}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">ক্রয়মূল্য (৳)</label>
+                  <Input
+                    type="number"
+                    value={editingProduct.buyPrice}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, buyPrice: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">বিক্রয়মূল্য (৳)</label>
+                  <Input
+                    type="number"
+                    value={editingProduct.sellPrice}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, sellPrice: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">স্টক পরিমাণ</label>
+                  <Input
+                    type="number"
+                    value={editingProduct.stock}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">একক (যেমন: কেজি, পিস)</label>
+                  <Input
+                    value={editingProduct.unit}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, unit: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="flex-1 rounded-xl bg-secondary py-2.5 text-sm font-medium text-secondary-foreground"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground"
+                >
+                  আপডেট করুন
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Screen>
   )
 }
